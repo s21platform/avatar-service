@@ -7,11 +7,20 @@ import (
 )
 
 type Config struct {
-	Service Service
+	Service  Service
+	Postgres Postgres
 }
 
 type Service struct {
-	Port string `env:"AVATAR_SERVICE_POSTGRES_PORT"`
+	Port string `env:"AVATAR_SERVICE_PORT"`
+}
+
+type Postgres struct {
+	User     string `env:"AVATAR_SERVICE_POSTGRES_USER"`
+	Password string `env:"AVATAR_SERVICE_POSTGRES_PASSWORD"`
+	Database string `env:"AVATAR_SERVICE_POSTGRES_DB"`
+	Host     string `env:"AVATAR_SERVICE_POSTGRES_HOST"`
+	Port     string `env:"AVATAR_SERVICE_POSTGRES_PORT"`
 }
 
 func MustLoad() *Config {
@@ -19,7 +28,7 @@ func MustLoad() *Config {
 	err := cleanenv.ReadEnv(cfg)
 
 	if err != nil {
-		log.Printf("Can not read env variables: %s\n", err)
+		log.Fatalln("error cleanenv.ReadEnv: ", err)
 	}
 
 	return cfg
