@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	_ "github.com/lib/pq"
+	_ "github.com/lib/pq" // Импорт драйвера PostgreSQL для использования в пакете database/sql
 )
 
 type Repository struct {
@@ -15,8 +15,9 @@ type Repository struct {
 }
 
 func New(cfg *config.Config) (*Repository, error) {
-	var repo *Repository
 	var err error
+
+	var repo *Repository
 
 	for i := 0; i < 5; i++ {
 		repo, err = connect(cfg)
