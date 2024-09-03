@@ -58,3 +58,31 @@ func connect(cfg *config.Config) (*Repository, error) {
 func (r *Repository) Close() {
 	_ = r.connection.Close()
 }
+
+func (r *Repository) GetAllAvatars(userUuid string) ([]string, error) {
+	row, err := r.connection.Query("SELECT link FROM avatar WHERE user_uuid = $1", userUuid)
+	if err != nil {
+		log.Println("error r.connection.Query: ", err)
+		return nil, err
+	}
+	defer row.Close()
+
+	var links []string
+
+	for row.Next() {
+		var link string
+		if err := row.Scan(&link); err != nil {
+			log.Println("error row.Scan(): ", err)
+			return nil, err
+		}
+
+		links = append(links, link)
+	}
+
+	if err := row.Err(); err != nil {
+		log.Println("error row.Err(): ", err)
+		return nil, err
+	}
+
+	return links, nil
+}
