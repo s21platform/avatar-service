@@ -1,6 +1,6 @@
 package service
 
 type DBRepo interface {
-	//SetAvatar(userUuid, filename string) (string, error)
-	GetAllAvatars(userUuid string) ([]string, error)
+	SetAvatar(userUUID, filename string, imageData []byte) (string, error)
+	GetAllAvatars(userUUID string) ([]string, error)
 }

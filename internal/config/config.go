@@ -7,8 +7,9 @@ import (
 )
 
 type Config struct {
-	Service  Service
-	Postgres Postgres
+	Service   Service
+	Postgres  Postgres
+	S3Storage S3Storage
 }
 
 type Service struct {
@@ -21,6 +22,12 @@ type Postgres struct {
 	Database string `env:"AVATAR_SERVICE_POSTGRES_DB"`
 	Host     string `env:"AVATAR_SERVICE_POSTGRES_HOST"`
 	Port     string `env:"AVATAR_SERVICE_POSTGRES_PORT"`
+}
+
+type S3Storage struct {
+	Endpoint        string `env:"AVATAR_SERVICE_S3_STORAGE_ENDPOINT"`
+	AccessKeyID     string `env:"AVATAR_SERVICE_S3_STORAGE_ACCESS_KEY_ID"`
+	SecretAccessKey string `env:"AVATAR_SERVICE_S3_STORAGE_ACCESS_KEY_SECRET"`
 }
 
 func MustLoad() *Config {

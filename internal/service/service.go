@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"io"
 
 	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
 )
@@ -15,14 +16,43 @@ func New(repo DBRepo) *Service {
 	return &Service{repository: repo}
 }
 
-//func (s *Service) SetAvatar(ctx context.Context, in *avatarproto.SetAvatarIn) (*avatarproto.SetAvatarOut, error) {
-//	_ = ctx
-//	link, err := s.repository.SetAvatar(in.UserUuid, in.Filename)
-//
-//	return &avatarproto.SetAvatarOut{Link: link}, err
-//}
+func (s *Service) SetAvatar(stream avatarproto.AvatarService_SetAvatarServer) error {
+	var (
+		userUUID  string
+		filename  string
+		imageData []byte
+	)
 
-func (s *Service) GetAllAvatars(ctx context.Context, in *avatarproto.GetAllAvatarsIn) (*avatarproto.GetAllAvatarsOut, error) {
+	for {
+		in, err := stream.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		}
+
+		if userUUID == "" && filename == "" {
+			userUUID = in.UserUuid
+			filename = in.Filename
+		}
+
+		imageData = append(imageData, in.Batch...)
+	}
+
+	link, err := s.repository.SetAvatar(userUUID, filename, imageData)
+	if err != nil {
+		return err
+	}
+
+	return stream.SendAndClose(&avatarproto.SetAvatarOut{
+		Link: link,
+	})
+}
+
+func (s *Service) GetAllAvatars(
+	ctx context.Context,
+	in *avatarproto.GetAllAvatarsIn,
+) (*avatarproto.GetAllAvatarsOut, error) {
 	_ = ctx
 	avatars, err := s.repository.GetAllAvatars(in.UserUuid)
 

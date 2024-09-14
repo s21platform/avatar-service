@@ -2,6 +2,8 @@ package db
 
 import (
 	"avatar_service/internal/config"
+	"avatar_service/internal/repository/s3storage"
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -12,15 +14,16 @@ import (
 
 type Repository struct {
 	connection *sql.DB
+	S3Client   s3storage.S3Storage
 }
 
-func New(cfg *config.Config) (*Repository, error) {
+func New(cfg *config.Config, s3Client s3storage.S3Storage) (*Repository, error) {
 	var err error
 
 	var repo *Repository
 
 	for i := 0; i < 5; i++ {
-		repo, err = connect(cfg)
+		repo, err = connect(cfg, s3Client)
 		if err == nil {
 			break
 		}
@@ -32,7 +35,7 @@ func New(cfg *config.Config) (*Repository, error) {
 	return repo, err
 }
 
-func connect(cfg *config.Config) (*Repository, error) {
+func connect(cfg *config.Config, s3Client s3storage.S3Storage) (*Repository, error) {
 	conStr := fmt.Sprintf(
 		"user=%s password=%s dbname=%s host=%s port=%s sslmode=disable",
 		cfg.Postgres.User,
@@ -52,15 +55,33 @@ func connect(cfg *config.Config) (*Repository, error) {
 		return nil, fmt.Errorf("error db.Ping: %w", err)
 	}
 
-	return &Repository{db}, err
+	return &Repository{connection: db, S3Client: s3Client}, err
 }
 
 func (r *Repository) Close() {
 	_ = r.connection.Close()
 }
 
-func (r *Repository) GetAllAvatars(userUuid string) ([]string, error) {
-	row, err := r.connection.Query("SELECT link FROM avatar WHERE user_uuid = $1", userUuid)
+func (r *Repository) SetAvatar(userUUID, filename string, imageData []byte) (string, error) {
+	bucketName := "space21staging" // Не придумал как лучше сохранить для быстрой смены между стейджом и продом
+	objectName := fmt.Sprintf("%s/%s", userUUID, filename)
+	contentType := "image/jpeg"
+
+	link, err := r.S3Client.UploadFile(context.Background(), bucketName, objectName, imageData, contentType)
+	if err != nil {
+		return "", fmt.Errorf("error r.MinioClient.UploadFile: %w", err)
+	}
+
+	_, err = r.connection.Exec("INSERT INTO avatar(user_uuid, link) VALUES ($1, $2)", userUUID, link)
+	if err != nil {
+		return "", fmt.Errorf("error r.connection.Exec: %w", err)
+	}
+
+	return link, nil
+}
+
+func (r *Repository) GetAllAvatars(userUUID string) ([]string, error) {
+	row, err := r.connection.Query("SELECT link FROM avatar WHERE user_uuid = $1", userUUID)
 	if err != nil {
 		log.Println("error r.connection.Query: ", err)
 		return nil, err

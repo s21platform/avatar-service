@@ -3,11 +3,11 @@ package main
 import (
 	"avatar_service/internal/config"
 	"avatar_service/internal/repository/db"
+	"avatar_service/internal/repository/s3storage"
 	"avatar_service/internal/service"
 	"fmt"
 	"log"
 	"net"
-	"os"
 
 	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
 	"google.golang.org/grpc"
@@ -15,13 +15,21 @@ import (
 
 func main() {
 	cfg := config.MustLoad()
-	dbRepo, err := db.New(cfg)
 
+	S3Client, err := s3storage.New(
+		cfg.S3Storage.Endpoint,
+		cfg.S3Storage.AccessKeyID,
+		cfg.S3Storage.SecretAccessKey,
+		true,
+	)
 	if err != nil {
-		log.Println("error db.New: ", err)
-		os.Exit(1)
+		log.Fatalln("error s3storage.New: ", err)
 	}
 
+	dbRepo, err := db.New(cfg, S3Client)
+	if err != nil {
+		log.Fatalln("error db.New: ", err)
+	}
 	defer dbRepo.Close()
 
 	avatarService := service.New(dbRepo)
@@ -36,5 +44,4 @@ func main() {
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Println("error grpcServer.Serve: ", err)
 	}
-
 }
