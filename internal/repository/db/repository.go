@@ -2,28 +2,25 @@ package db
 
 import (
 	"avatar_service/internal/config"
-	"avatar_service/internal/repository/s3storage"
-	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Импорт драйвера PostgreSQL для использования в пакете database/sql
 )
 
 type Repository struct {
-	connection *sql.DB
-	S3Client   s3storage.S3Storage
+	connection *sqlx.DB
 }
 
-func New(cfg *config.Config, s3Client s3storage.S3Storage) (*Repository, error) {
+func New(cfg *config.Config) (*Repository, error) {
 	var err error
 
 	var repo *Repository
 
 	for i := 0; i < 5; i++ {
-		repo, err = connect(cfg, s3Client)
+		repo, err = connect(cfg)
 		if err == nil {
 			break
 		}
@@ -35,7 +32,7 @@ func New(cfg *config.Config, s3Client s3storage.S3Storage) (*Repository, error) 
 	return repo, err
 }
 
-func connect(cfg *config.Config, s3Client s3storage.S3Storage) (*Repository, error) {
+func connect(cfg *config.Config) (*Repository, error) {
 	conStr := fmt.Sprintf(
 		"user=%s password=%s dbname=%s host=%s port=%s sslmode=disable",
 		cfg.Postgres.User,
@@ -45,65 +42,36 @@ func connect(cfg *config.Config, s3Client s3storage.S3Storage) (*Repository, err
 		cfg.Postgres.Port,
 	)
 
-	db, err := sql.Open("postgres", conStr)
-
+	db, err := sqlx.Connect("postgres", conStr)
 	if err != nil {
 		return nil, fmt.Errorf("error sql.Open: %w", err)
 	}
 
-	if err = db.Ping(); err != nil {
-		return nil, fmt.Errorf("error db.Ping: %w", err)
-	}
-
-	return &Repository{connection: db, S3Client: s3Client}, err
+	return &Repository{connection: db}, err
 }
 
 func (r *Repository) Close() {
 	_ = r.connection.Close()
 }
 
-func (r *Repository) SetAvatar(userUUID, filename string, imageData []byte) (string, error) {
-	bucketName := "space21staging" // Не придумал как лучше сохранить для быстрой смены между стейджом и продом
-	objectName := fmt.Sprintf("%s/%s", userUUID, filename)
-	contentType := "image/jpeg"
+func (r *Repository) SetAvatar(userUUID, link string) error {
+	query := `INSERT INTO avatar (user_uuid, link) VALUES ($1, $2)`
+	_, err := r.connection.Exec(query, userUUID, link)
 
-	link, err := r.S3Client.UploadFile(context.Background(), bucketName, objectName, imageData, contentType)
 	if err != nil {
-		return "", fmt.Errorf("error r.MinioClient.UploadFile: %w", err)
+		return fmt.Errorf("error r.connection.Exec: %w", err)
 	}
 
-	_, err = r.connection.Exec("INSERT INTO avatar(user_uuid, link) VALUES ($1, $2)", userUUID, link)
-	if err != nil {
-		return "", fmt.Errorf("error r.connection.Exec: %w", err)
-	}
-
-	return link, nil
+	return nil
 }
 
 func (r *Repository) GetAllAvatars(userUUID string) ([]string, error) {
-	row, err := r.connection.Query("SELECT link FROM avatar WHERE user_uuid = $1", userUUID)
+	var avatars []string
+
+	err := r.connection.Select(&avatars, `SELECT link FROM avatar WHERE user_uuid = $1`, userUUID)
 	if err != nil {
-		log.Println("error r.connection.Query: ", err)
-		return nil, err
-	}
-	defer row.Close()
-
-	var links []string
-
-	for row.Next() {
-		var link string
-		if err := row.Scan(&link); err != nil {
-			log.Println("error row.Scan(): ", err)
-			return nil, err
-		}
-
-		links = append(links, link)
+		return nil, fmt.Errorf("error r.connection.Select: %w", err)
 	}
 
-	if err := row.Err(); err != nil {
-		log.Println("error row.Err(): ", err)
-		return nil, err
-	}
-
-	return links, nil
+	return avatars, nil
 }
