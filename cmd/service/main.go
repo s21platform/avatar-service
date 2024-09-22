@@ -3,7 +3,7 @@ package main
 import (
 	"avatar_service/internal/config"
 	"avatar_service/internal/repository/db"
-	"avatar_service/internal/repository/s3"
+	"avatar_service/internal/repository/s3storage"
 	"avatar_service/internal/service"
 	"fmt"
 	"log"
@@ -16,14 +16,14 @@ import (
 func main() {
 	cfg := config.MustLoad()
 
-	s3Client, err := s3.New(
+	s3Client, err := s3storage.New(
 		cfg.S3Storage.Endpoint,
 		cfg.S3Storage.AccessKeyID,
 		cfg.S3Storage.SecretAccessKey,
 		true,
 	)
 	if err != nil {
-		log.Fatalln("error s3.New: ", err)
+		log.Fatalln("error s3storage.New: ", err)
 	}
 
 	dbRepo, err := db.New(cfg)
