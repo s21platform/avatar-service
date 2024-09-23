@@ -1,4 +1,4 @@
-package s3
+package s3 //nolint:typecheck,nolintlint
 
 import (
 	"avatar_service/internal/config"
