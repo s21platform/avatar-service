@@ -1,4 +1,5 @@
-package s3 //nolint:typecheck,nolintlint
+// Package s3 nolint
+package s3
 
 import (
 	"avatar_service/internal/config"
@@ -9,7 +10,7 @@ import (
 	_ "image/jpeg" // Регистрация формата jpeg для декодирования изображения в convertToWebP()
 	_ "image/png"  // Регистрация формата png для декодирования изображения в convertToWebP()
 
-	"github.com/kolesa-team/go-webp/encoder" //nolint:typecheck,nolintlint
+	"github.com/kolesa-team/go-webp/encoder"
 	"github.com/kolesa-team/go-webp/webp"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
