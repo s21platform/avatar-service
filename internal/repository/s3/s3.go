@@ -1,12 +1,13 @@
-package s3storage
+package s3
 
 import (
+	"avatar_service/internal/config"
 	"bytes"
 	"context"
 	"fmt"
 	"image"
-	_ "image/jpeg" // register the JPEG format for image decoding
-	_ "image/png"  // register the PNG format for image decoding
+	_ "image/jpeg" // Регистрация формата jpeg для декодирования изображения в convertToWebP()
+	_ "image/png"  // Регистрация формата png для декодирования изображения в convertToWebP()
 
 	"github.com/kolesa-team/go-webp/encoder"
 	"github.com/kolesa-team/go-webp/webp"
@@ -18,16 +19,29 @@ type Client struct {
 	MinioClient *minio.Client
 }
 
-func New(endpoint, accessKeyID, secretAccessKey string, useSSL bool) (*Client, error) {
+func New(cfg *config.Config) (*Client, error) {
+	minioClient, err := createMinioClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{MinioClient: minioClient}, nil
+}
+
+func createMinioClient(cfg *config.Config) (*minio.Client, error) {
+	endpoint := cfg.S3Storage.Endpoint
+	accessKeyID := cfg.S3Storage.AccessKeyID
+	secretAccessKey := cfg.S3Storage.SecretAccessKey
+
 	minioClient, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
-		Secure: useSSL,
+		Secure: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error minio.New: %w", err)
 	}
 
-	return &Client{MinioClient: minioClient}, nil
+	return minioClient, nil
 }
 
 func (c *Client) UploadFile(ctx context.Context, bucketName, objectName string, imageData []byte,
