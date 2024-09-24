@@ -47,8 +47,3 @@ linter-settings:
   funlen:
     lines: 120
     statements: 50
-
-exclude-rules:
-  - path: "internal/repository/s3/s3.go"
-    linters:
-      - all
