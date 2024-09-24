@@ -1,5 +1,7 @@
 FROM golang:1.22 as builder
 
+RUN apt-get update && apt-get install -y libwebp-dev
+
 WORKDIR /usr/src/service
 COPY go.mod .
 COPY go.sum .
