@@ -1,4 +1,3 @@
-// Package s3 nolint
 package s3
 
 import (
@@ -10,7 +9,7 @@ import (
 	_ "image/jpeg" // Регистрация формата jpeg для декодирования изображения в convertToWebP()
 	_ "image/png"  // Регистрация формата png для декодирования изображения в convertToWebP()
 
-	"github.com/kolesa-team/go-webp/encoder"
+	"github.com/kolesa-team/go-webp/encoder" //nolint:typecheck
 	"github.com/kolesa-team/go-webp/webp"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
