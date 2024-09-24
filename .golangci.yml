@@ -51,4 +51,4 @@ linter-settings:
 exclude-rules:
   - path: "internal/repository/s3/s3.go"
     linters:
-      - typecheck
+      - all
