@@ -3,18 +3,40 @@ package main
 import (
 	"avatar_service/internal/config"
 	"avatar_service/internal/repository/db"
+	"avatar_service/internal/repository/s3"
+	"avatar_service/internal/service"
+	"fmt"
 	"log"
-	"os"
+	"net"
+
+	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
+	"google.golang.org/grpc"
 )
 
 func main() {
 	cfg := config.MustLoad()
-	dbRepo, err := db.New(cfg)
 
+	s3Client, err := s3.New(cfg)
 	if err != nil {
-		log.Println("error db.New: ", err)
-		os.Exit(1)
+		log.Fatalln("error s3.New: ", err)
 	}
 
+	dbRepo, err := db.New(cfg)
+	if err != nil {
+		log.Fatalln("error db.New: ", err)
+	}
 	defer dbRepo.Close()
+
+	avatarService := service.New(dbRepo, s3Client)
+	grpcServer := grpc.NewServer()
+	avatarproto.RegisterAvatarServiceServer(grpcServer, avatarService)
+
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Service.Port))
+	if err != nil {
+		log.Println("error net.Listen: ", err)
+	}
+
+	if err := grpcServer.Serve(listener); err != nil {
+		log.Println("error grpcServer.Serve: ", err)
+	}
 }

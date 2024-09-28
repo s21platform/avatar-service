@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GO_PATHS_CMD: cmd/service
-      GO_PATHS_INTERNAL: internal/config internal/repository/db
+      GO_PATHS_INTERNAL: internal/config internal/repository/db internal/repository/s3 internal/service
 
     steps:
       - name: Checkout code
@@ -21,6 +21,9 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: 1.22
+
+      - name: Install WebP library (libwebp-dev)
+        run: sudo apt-get update && sudo apt-get install -y libwebp-dev
 
       - name: Install golangci-lint
         run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
@@ -56,7 +59,7 @@ jobs:
       #          fi
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: coverage-report
           path: coverage.txt
