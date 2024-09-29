@@ -13,6 +13,8 @@ RUN go build -o build/main cmd/service/main.go
 
 FROM alpine
 
+RUN apk add --no-cache libwebp-dev
+
 WORKDIR /app
 
 COPY --from=builder /usr/src/service/build/main /app
