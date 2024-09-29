@@ -10,3 +10,7 @@ type DBRepo interface {
 type S3Storage interface {
 	UploadFile(ctx context.Context, bucketName, objectName string, fileData []byte, contentType string) (string, error)
 }
+
+type Kafka interface {
+	SendMessage(ctx context.Context, userUUID, avatarLink string) error
+}

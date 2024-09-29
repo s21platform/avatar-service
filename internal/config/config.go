@@ -10,6 +10,7 @@ type Config struct {
 	Service   Service
 	Postgres  Postgres
 	S3Storage S3Storage
+	Kafka     Kafka
 }
 
 type Service struct {
@@ -28,6 +29,11 @@ type S3Storage struct {
 	Endpoint        string `env:"AVATAR_SERVICE_S3_STORAGE_ENDPOINT"`
 	AccessKeyID     string `env:"AVATAR_SERVICE_S3_STORAGE_ACCESS_KEY_ID"`
 	SecretAccessKey string `env:"AVATAR_SERVICE_S3_STORAGE_ACCESS_KEY_SECRET"`
+}
+
+type Kafka struct {
+	TopicForWriting string `env:"AVATAR_SET_NEW"`
+	Server          string `env:"KAFKA_SERVER"`
 }
 
 func MustLoad() *Config {
