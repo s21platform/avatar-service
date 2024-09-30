@@ -10,12 +10,17 @@ import (
 
 type Service struct {
 	avatarproto.UnimplementedAvatarServiceServer
-	repository DBRepo
-	s3Client   S3Storage
+	s3Client      S3Storage
+	repository    DBRepo
+	kafkaProducer Kafka
 }
 
-func New(repo DBRepo, s3Client S3Storage) *Service {
-	return &Service{repository: repo, s3Client: s3Client}
+func New(s3Client S3Storage, repo DBRepo, kafkaProducer Kafka) *Service {
+	return &Service{
+		s3Client:      s3Client,
+		repository:    repo,
+		kafkaProducer: kafkaProducer,
+	}
 }
 
 func (s *Service) SetAvatar(stream avatarproto.AvatarService_SetAvatarServer) error {
@@ -30,6 +35,11 @@ func (s *Service) SetAvatar(stream avatarproto.AvatarService_SetAvatarServer) er
 	}
 
 	err = s.updateAvatarInDB(userUUID, link)
+	if err != nil {
+		return err
+	}
+
+	err = s.kafkaProducer.SendMessage(context.Background(), userUUID, link)
 	if err != nil {
 		return err
 	}

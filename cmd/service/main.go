@@ -3,6 +3,7 @@ package main
 import (
 	"avatar_service/internal/config"
 	"avatar_service/internal/repository/db"
+	kafka "avatar_service/internal/repository/kafka/producer/newavatar"
 	"avatar_service/internal/repository/s3"
 	"avatar_service/internal/service"
 	"fmt"
@@ -27,7 +28,13 @@ func main() {
 	}
 	defer dbRepo.Close()
 
-	avatarService := service.New(dbRepo, s3Client)
+	kafkaProducer, err := kafka.New(cfg)
+	if err != nil {
+		log.Println("error kafka.New: ", err)
+	}
+	defer kafkaProducer.Close()
+
+	avatarService := service.New(s3Client, dbRepo, kafkaProducer)
 	grpcServer := grpc.NewServer()
 	avatarproto.RegisterAvatarServiceServer(grpcServer, avatarService)
 
