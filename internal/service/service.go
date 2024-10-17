@@ -6,7 +6,7 @@ import (
 	"io"
 
 	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
-	"github.com/s21platform/avatar-proto/avatar-proto/new_avatar_register"
+	"github.com/s21platform/user-proto/user-proto/new_avatar_register"
 )
 
 type Service struct {
