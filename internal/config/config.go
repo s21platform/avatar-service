@@ -32,8 +32,8 @@ type S3Storage struct {
 }
 
 type Kafka struct {
-	TopicForWriting string `env:"AVATAR_SET_NEW"`
-	Server          string `env:"KAFKA_SERVER"`
+	AvatarNewSet string `env:"AVATAR_SET_NEW"`
+	Server       string `env:"KAFKA_SERVER"`
 }
 
 func MustLoad() *Config {

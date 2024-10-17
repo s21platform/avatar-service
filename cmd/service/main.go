@@ -3,12 +3,13 @@ package main
 import (
 	"avatar_service/internal/config"
 	"avatar_service/internal/repository/db"
-	kafka "avatar_service/internal/repository/kafka/producer/newavatar"
 	"avatar_service/internal/repository/s3"
 	"avatar_service/internal/service"
 	"fmt"
 	"log"
 	"net"
+
+	kafkalib "github.com/s21platform/kafka-lib"
 
 	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
 	"google.golang.org/grpc"
@@ -28,13 +29,9 @@ func main() {
 	}
 	defer dbRepo.Close()
 
-	kafkaProducer, err := kafka.New(cfg)
-	if err != nil {
-		log.Println("error kafka.New: ", err)
-	}
-	defer kafkaProducer.Close()
+	producerNewFriendRegister := kafkalib.NewProducer(cfg.Kafka.Server, cfg.Kafka.AvatarNewSet)
 
-	avatarService := service.New(s3Client, dbRepo, kafkaProducer)
+	avatarService := service.New(s3Client, dbRepo, producerNewFriendRegister)
 	grpcServer := grpc.NewServer()
 	avatarproto.RegisterAvatarServiceServer(grpcServer, avatarService)
 
