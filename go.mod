@@ -1,6 +1,8 @@
 module avatar_service
 
-go 1.22.6
+go 1.22.8
+
+toolchain go1.23.0
 
 require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
@@ -8,8 +10,8 @@ require (
 	github.com/kolesa-team/go-webp v1.0.4
 	github.com/lib/pq v1.10.9
 	github.com/minio/minio-go/v7 v7.0.76
-	github.com/s21platform/avatar-proto v0.0.3
-	github.com/segmentio/kafka-go v0.4.47
+	github.com/s21platform/avatar-proto v0.0.4
+	github.com/s21platform/kafka-lib v0.0.4
 	google.golang.org/grpc v1.67.0
 )
 
@@ -25,6 +27,7 @@ require (
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/rs/xid v1.6.0 // indirect
+	github.com/segmentio/kafka-go v0.4.47 // indirect
 	golang.org/x/crypto v0.27.0 // indirect
 	golang.org/x/net v0.29.0 // indirect
 	golang.org/x/sys v0.25.0 // indirect
