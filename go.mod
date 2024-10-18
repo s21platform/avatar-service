@@ -2,8 +2,6 @@ module avatar_service
 
 go 1.22.8
 
-toolchain go1.23.0
-
 require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jmoiron/sqlx v1.4.0
