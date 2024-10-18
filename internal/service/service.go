@@ -6,16 +6,17 @@ import (
 	"io"
 
 	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
+	"github.com/s21platform/user-proto/user-proto/new_avatar_register"
 )
 
 type Service struct {
 	avatarproto.UnimplementedAvatarServiceServer
 	s3Client      S3Storage
 	repository    DBRepo
-	kafkaProducer Kafka
+	kafkaProducer NewAvatarRegisterSrv
 }
 
-func New(s3Client S3Storage, repo DBRepo, kafkaProducer Kafka) *Service {
+func New(s3Client S3Storage, repo DBRepo, kafkaProducer NewAvatarRegisterSrv) *Service {
 	return &Service{
 		s3Client:      s3Client,
 		repository:    repo,
@@ -39,7 +40,7 @@ func (s *Service) SetAvatar(stream avatarproto.AvatarService_SetAvatarServer) er
 		return err
 	}
 
-	err = s.kafkaProducer.SendMessage(context.Background(), userUUID, link)
+	err = s.produceAvatarRegistration(userUUID, link)
 	if err != nil {
 		return err
 	}
@@ -92,6 +93,20 @@ func (s *Service) updateAvatarInDB(userUUID, link string) error {
 	err := s.repository.SetAvatar(userUUID, link)
 	if err != nil {
 		return fmt.Errorf("error s.repository.SetAvatar: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) produceAvatarRegistration(userUUID, link string) error {
+	msg := &new_avatar_register.NewAvatarRegister{
+		Uuid: userUUID,
+		Link: link,
+	}
+
+	err := s.kafkaProducer.ProduceMessage(msg)
+	if err != nil {
+		return err
 	}
 
 	return nil
