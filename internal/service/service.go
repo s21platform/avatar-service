@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"path/filepath"
+	"strings"
+	"time"
 
 	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
 	"github.com/s21platform/user-proto/user-proto/new_avatar_register"
@@ -78,7 +81,7 @@ func (s *Service) receiveData(stream avatarproto.AvatarService_SetAvatarServer) 
 
 func (s *Service) uploadToS3(userUUID, filename string, imageData []byte) (string, error) {
 	bucketName := "space21staging"
-	objectName := fmt.Sprintf("%s/%s", userUUID, filename)
+	objectName := getObjectName(userUUID, filename)
 	contentType := "image/webp"
 
 	link, err := s.s3Client.UploadFile(context.Background(), bucketName, objectName, imageData, contentType)
@@ -87,6 +90,21 @@ func (s *Service) uploadToS3(userUUID, filename string, imageData []byte) (strin
 	}
 
 	return link, nil
+}
+
+func getObjectName(userUUID, filename string) string {
+	return fmt.Sprintf("%s/%s", userUUID, generateTimestampedFileName(filename))
+}
+
+func generateTimestampedFileName(filename string) string {
+	timestamp := time.Now().Format("20060102_150405")
+
+	extension := filepath.Ext(filename)
+	baseName := strings.TrimSuffix(filename, extension)
+
+	newExtension := ".webp"
+
+	return fmt.Sprintf("%s_%s%s", timestamp, baseName, newExtension)
 }
 
 func (s *Service) updateAvatarInDB(userUUID, link string) error {
