@@ -68,7 +68,7 @@ func (r *Repository) SetAvatar(userUUID, link string) error {
 func (r *Repository) GetAllAvatars(userUUID string) ([]string, error) {
 	var avatars []string
 
-	err := r.connection.Select(&avatars, `SELECT link FROM avatar WHERE user_uuid = $1`, userUUID)
+	err := r.connection.Select(&avatars, `SELECT link FROM avatar WHERE user_uuid = $1 ORDER BY link DESC`, userUUID)
 	if err != nil {
 		return nil, fmt.Errorf("error r.connection.Select: %w", err)
 	}
