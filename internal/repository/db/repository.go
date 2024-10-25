@@ -8,6 +8,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Импорт драйвера PostgreSQL для использования в пакете database/sql
+	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
 )
 
 type Repository struct {
@@ -65,10 +66,10 @@ func (r *Repository) SetAvatar(userUUID, link string) error {
 	return nil
 }
 
-func (r *Repository) GetAllAvatars(userUUID string) ([]string, error) {
-	var avatars []string
+func (r *Repository) GetAllAvatars(userUUID string) ([]*avatarproto.Avatar, error) {
+	var avatars []*avatarproto.Avatar
 
-	err := r.connection.Select(&avatars, `SELECT link FROM avatar WHERE user_uuid = $1 ORDER BY link DESC`, userUUID)
+	err := r.connection.Select(&avatars, `SELECT id, link FROM avatar WHERE user_uuid = $1 ORDER BY link DESC`, userUUID)
 	if err != nil {
 		return nil, fmt.Errorf("error r.connection.Select: %w", err)
 	}
