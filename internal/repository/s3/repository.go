@@ -165,7 +165,7 @@ func (c *Client) bucketAndObjectExist(ctx context.Context, bucketName, objectNam
 func (c *Client) removeObject(ctx context.Context, bucketName, objectName string) error {
 	err := c.MinioClient.RemoveObject(ctx, bucketName, objectName, minio.RemoveObjectOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to remove avatar from s3: %w", err)
+		return fmt.Errorf("failed to remove object from s3: %w", err)
 	}
 
 	return nil

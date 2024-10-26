@@ -146,19 +146,19 @@ func (s *Service) DeleteAvatar(ctx context.Context, in *avatarproto.DeleteAvatar
 
 	err = s.s3Client.DeleteAvatar(ctx, avatarInfo.Link)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to delete avatar in s3: %w", err)
 	}
 
 	err = s.repository.DeleteAvatar(avatarInfo.ID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to delete avatar in db: %w", err)
 	}
 
 	latestAvatar := s.repository.GetLatestAvatar(avatarInfo.UserUUID)
 	err = s.produceNewAvatar(avatarInfo.UserUUID, latestAvatar)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to produce avatar: %w", err)
 	}
 
 	return &avatarproto.Avatar{
