@@ -2,6 +2,7 @@ package db
 
 import (
 	"avatar_service/internal/config"
+	modelAvatar "avatar_service/internal/model/avatar"
 	"fmt"
 	"log"
 	"time"
@@ -79,22 +80,17 @@ func (r *Repository) GetAllAvatars(userUUID string) ([]*avatarproto.Avatar, erro
 	return avatars, nil
 }
 
-func (r *Repository) GetAvatarData(avatarID int) (int, string, string, time.Time, error) {
-	var avatarData struct {
-		ID        int       `db:"id"`
-		UserUUID  string    `db:"user_uuid"`
-		Link      string    `db:"link"`
-		CreatedAt time.Time `db:"create_at"`
-	}
+func (r *Repository) GetAvatarData(avatarID int) (*modelAvatar.Info, error) {
+	var avatarInfo modelAvatar.Info
 
 	query := `SELECT id, user_uuid, link, create_at FROM avatar WHERE id = $1`
-	err := r.connection.Get(&avatarData, query, avatarID)
+	err := r.connection.Get(&avatarInfo, query, avatarID)
 
 	if err != nil {
-		return 0, "", "", time.Time{}, fmt.Errorf("error r.connection.Get: %w", err)
+		return nil, fmt.Errorf("failed to get avatar data: %w", err)
 	}
 
-	return avatarData.ID, avatarData.UserUUID, avatarData.Link, avatarData.CreatedAt, nil
+	return &avatarInfo, nil
 }
 
 func (r *Repository) DeleteAvatar(avatarID int) error {
@@ -102,7 +98,7 @@ func (r *Repository) DeleteAvatar(avatarID int) error {
 	_, err := r.connection.Exec(query, avatarID)
 
 	if err != nil {
-		return fmt.Errorf("error r.connection.Exec: %w", err)
+		return fmt.Errorf("failed to delete avatar from db: %w", err)
 	}
 
 	return nil
@@ -115,7 +111,7 @@ func (r *Repository) GetLatestAvatar(userUUID string) string {
 
 	err := r.connection.Get(&link, query, userUUID)
 	if err != nil {
-		return ""
+		return "" // todo сюда можно хуйнуть дефолтную аву. Продумать как сделать
 	}
 
 	return link

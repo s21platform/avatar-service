@@ -123,7 +123,7 @@ func (c *Client) generateLink(bucketName, objectName string) string {
 func (c *Client) DeleteAvatar(ctx context.Context, link string) error {
 	bucketName, objectName, err := parseBucketAndObject(link)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse backet and object: %w", err)
 	}
 
 	err = c.bucketAndObjectExist(ctx, bucketName, objectName)
@@ -156,7 +156,7 @@ func parseBucketAndObject(link string) (string, string, error) {
 func (c *Client) bucketAndObjectExist(ctx context.Context, bucketName, objectName string) error {
 	_, err := c.MinioClient.StatObject(ctx, bucketName, objectName, minio.StatObjectOptions{})
 	if err != nil {
-		return fmt.Errorf("object does not exist or cannot be accessed: %w", err)
+		return fmt.Errorf("failed to object does not exist or cannot be accessed: %w", err)
 	}
 
 	return nil
@@ -165,7 +165,7 @@ func (c *Client) bucketAndObjectExist(ctx context.Context, bucketName, objectNam
 func (c *Client) removeObject(ctx context.Context, bucketName, objectName string) error {
 	err := c.MinioClient.RemoveObject(ctx, bucketName, objectName, minio.RemoveObjectOptions{})
 	if err != nil {
-		return fmt.Errorf("error c.MinioClient.RemoveObject: %w", err)
+		return fmt.Errorf("failed to remove avatar from s3: %w", err)
 	}
 
 	return nil

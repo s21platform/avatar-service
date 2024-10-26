@@ -139,23 +139,23 @@ func (s *Service) GetAllAvatars(ctx context.Context,
 }
 
 func (s *Service) DeleteAvatar(ctx context.Context, in *avatarproto.DeleteAvatarIn) (*avatarproto.Avatar, error) {
-	avatarID, userUUID, link, _, err := s.repository.GetAvatarData(int(in.AvatarId))
+	avatarInfo, err := s.repository.GetAvatarData(int(in.AvatarId))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get avatar data: %w", err)
+	}
+
+	err = s.s3Client.DeleteAvatar(ctx, avatarInfo.Link)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.s3Client.DeleteAvatar(ctx, link)
+	err = s.repository.DeleteAvatar(avatarInfo.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.repository.DeleteAvatar(avatarID)
-	if err != nil {
-		return nil, err
-	}
-
-	latestAvatar := s.repository.GetLatestAvatar(userUUID)
-	err = s.produceNewAvatar(userUUID, latestAvatar)
+	latestAvatar := s.repository.GetLatestAvatar(avatarInfo.UserUUID)
+	err = s.produceNewAvatar(avatarInfo.UserUUID, latestAvatar)
 
 	if err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ func (s *Service) DeleteAvatar(ctx context.Context, in *avatarproto.DeleteAvatar
 
 	return &avatarproto.Avatar{
 		//nolint: gosec
-		Id:   int32(avatarID),
-		Link: link,
+		Id:   int32(avatarInfo.ID),
+		Link: avatarInfo.Link,
 	}, err
 }
