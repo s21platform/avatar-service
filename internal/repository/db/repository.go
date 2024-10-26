@@ -69,10 +69,54 @@ func (r *Repository) SetAvatar(userUUID, link string) error {
 func (r *Repository) GetAllAvatars(userUUID string) ([]*avatarproto.Avatar, error) {
 	var avatars []*avatarproto.Avatar
 
-	err := r.connection.Select(&avatars, `SELECT id, link FROM avatar WHERE user_uuid = $1 ORDER BY link DESC`, userUUID)
+	query := `SELECT id, link FROM avatar WHERE user_uuid = $1 ORDER BY link DESC`
+
+	err := r.connection.Select(&avatars, query, userUUID)
 	if err != nil {
 		return nil, fmt.Errorf("error r.connection.Select: %w", err)
 	}
 
 	return avatars, nil
+}
+
+func (r *Repository) GetAvatarData(avatarID int) (int, string, string, time.Time, error) {
+	var avatarData struct {
+		ID        int       `db:"id"`
+		UserUUID  string    `db:"user_uuid"`
+		Link      string    `db:"link"`
+		CreatedAt time.Time `db:"create_at"`
+	}
+
+	query := `SELECT id, user_uuid, link, create_at FROM avatar WHERE id = $1`
+	err := r.connection.Get(&avatarData, query, avatarID)
+
+	if err != nil {
+		return 0, "", "", time.Time{}, fmt.Errorf("error r.connection.Get: %w", err)
+	}
+
+	return avatarData.ID, avatarData.UserUUID, avatarData.Link, avatarData.CreatedAt, nil
+}
+
+func (r *Repository) DeleteAvatar(avatarID int) error {
+	query := `DELETE FROM avatar WHERE id = $1`
+	_, err := r.connection.Exec(query, avatarID)
+
+	if err != nil {
+		return fmt.Errorf("error r.connection.Exec: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Repository) GetLatestAvatar(userUUID string) string {
+	var link string
+
+	query := `SELECT link FROM avatar WHERE user_uuid = $1 ORDER BY create_at DESC LIMIT 1`
+
+	err := r.connection.Get(&link, query, userUUID)
+	if err != nil {
+		return ""
+	}
+
+	return link
 }

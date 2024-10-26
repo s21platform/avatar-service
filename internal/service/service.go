@@ -38,12 +38,12 @@ func (s *Service) SetAvatar(stream avatarproto.AvatarService_SetAvatarServer) er
 		return err
 	}
 
-	err = s.updateAvatarInDB(userUUID, link)
+	err = s.uploadToDB(userUUID, link)
 	if err != nil {
 		return err
 	}
 
-	err = s.produceAvatarRegistration(userUUID, link)
+	err = s.produceNewAvatar(userUUID, link)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func generateTimestampedFileName(filename string) string {
 	return fmt.Sprintf("%s_%s%s", timestamp, baseName, newExtension)
 }
 
-func (s *Service) updateAvatarInDB(userUUID, link string) error {
+func (s *Service) uploadToDB(userUUID, link string) error {
 	err := s.repository.SetAvatar(userUUID, link)
 	if err != nil {
 		return fmt.Errorf("error s.repository.SetAvatar: %w", err)
@@ -116,7 +116,7 @@ func (s *Service) updateAvatarInDB(userUUID, link string) error {
 	return nil
 }
 
-func (s *Service) produceAvatarRegistration(userUUID, link string) error {
+func (s *Service) produceNewAvatar(userUUID, link string) error {
 	msg := &new_avatar_register.NewAvatarRegister{
 		Uuid: userUUID,
 		Link: link,
@@ -136,4 +136,34 @@ func (s *Service) GetAllAvatars(ctx context.Context,
 	avatars, err := s.repository.GetAllAvatars(in.UserUuid)
 
 	return &avatarproto.GetAllAvatarsOut{AvatarList: avatars}, err
+}
+
+func (s *Service) DeleteAvatar(ctx context.Context, in *avatarproto.DeleteAvatarIn) (*avatarproto.Avatar, error) {
+	avatarID, userUUID, link, _, err := s.repository.GetAvatarData(int(in.AvatarId))
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.s3Client.DeleteAvatar(ctx, link)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.repository.DeleteAvatar(avatarID)
+	if err != nil {
+		return nil, err
+	}
+
+	latestAvatar := s.repository.GetLatestAvatar(userUUID)
+	err = s.produceNewAvatar(userUUID, latestAvatar)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &avatarproto.Avatar{
+		//nolint: gosec
+		Id:   int32(avatarID),
+		Link: link,
+	}, err
 }

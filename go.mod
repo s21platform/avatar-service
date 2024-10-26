@@ -8,7 +8,7 @@ require (
 	github.com/kolesa-team/go-webp v1.0.4
 	github.com/lib/pq v1.10.9
 	github.com/minio/minio-go/v7 v7.0.79
-	github.com/s21platform/avatar-proto v0.0.5
+	github.com/s21platform/avatar-proto v0.0.8
 	github.com/s21platform/kafka-lib v0.0.4
 	github.com/s21platform/user-proto v0.0.7
 	google.golang.org/grpc v1.67.1

@@ -47,8 +47,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rs/xid v1.6.0 h1:fV591PaemRlL6JfRxGDEPl69wICngIQ3shQtzfy2gxU=
 github.com/rs/xid v1.6.0/go.mod h1:7XoLgs4eV+QndskICGsho+ADou8ySMSjJKDIan90Nz0=
-github.com/s21platform/avatar-proto v0.0.5 h1:JNfHad+0hNPZScbqhLa/ovVNvqhSpobzYCrJg7zYJ78=
-github.com/s21platform/avatar-proto v0.0.5/go.mod h1:wWAbIIgqI5WMDWJ1aGratOUdOlxE0qZvFDPPtYSK7LI=
+github.com/s21platform/avatar-proto v0.0.8 h1:igdZLcKdnbhRrlCe4DG1VTabUKNjSwkuMasc6zu+mTU=
+github.com/s21platform/avatar-proto v0.0.8/go.mod h1:ODKgac1iLsCwm5OKZLmeYZLs/fzDRmnkxqvWDG+yoAg=
 github.com/s21platform/kafka-lib v0.0.4 h1:w6qdLi8Sa3f24xzM1bhAPLsW8mjPlh/qhmxyUwM4/i0=
 github.com/s21platform/kafka-lib v0.0.4/go.mod h1:tmLv0RuMll1rznHyvVU7fSKZCNcZuKdR28bq5mJfjB8=
 github.com/s21platform/user-proto v0.0.7 h1:nR64ulAPBDR2326FEbvsvH3l6jDSyEbXbkmkhwYsA/E=
