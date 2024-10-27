@@ -8,6 +8,8 @@ import (
 	"image"
 	_ "image/jpeg" // Регистрация формата jpeg для декодирования изображения в convertToWebP()
 	_ "image/png"  // Регистрация формата png для декодирования изображения в convertToWebP()
+	"net/url"
+	"strings"
 
 	"github.com/kolesa-team/go-webp/encoder"
 	"github.com/kolesa-team/go-webp/webp"
@@ -116,4 +118,55 @@ func (c *Client) uploadToS3(ctx context.Context, bucketName, objectName string, 
 
 func (c *Client) generateLink(bucketName, objectName string) string {
 	return fmt.Sprintf("https://storage.yandexcloud.net/%s/%s", bucketName, objectName)
+}
+
+func (c *Client) DeleteAvatar(ctx context.Context, link string) error {
+	bucketName, objectName, err := parseBucketAndObject(link)
+	if err != nil {
+		return fmt.Errorf("failed to parse backet and object: %w", err)
+	}
+
+	err = c.bucketAndObjectExist(ctx, bucketName, objectName)
+	if err != nil {
+		return err
+	}
+
+	err = c.removeObject(ctx, bucketName, objectName)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func parseBucketAndObject(link string) (string, string, error) {
+	u, err := url.Parse(link)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid URL: %w", err)
+	}
+
+	parts := strings.SplitN(strings.TrimPrefix(u.Path, "/"), "/", 2)
+	if len(parts) < 2 {
+		return "", "", fmt.Errorf("link doesn't contain bucket and object name")
+	}
+
+	return parts[0], parts[1], nil
+}
+
+func (c *Client) bucketAndObjectExist(ctx context.Context, bucketName, objectName string) error {
+	_, err := c.MinioClient.StatObject(ctx, bucketName, objectName, minio.StatObjectOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to object does not exist or cannot be accessed: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Client) removeObject(ctx context.Context, bucketName, objectName string) error {
+	err := c.MinioClient.RemoveObject(ctx, bucketName, objectName, minio.RemoveObjectOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to remove object from s3: %w", err)
+	}
+
+	return nil
 }

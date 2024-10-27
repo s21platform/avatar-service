@@ -38,12 +38,12 @@ func (s *Service) SetAvatar(stream avatarproto.AvatarService_SetAvatarServer) er
 		return err
 	}
 
-	err = s.updateAvatarInDB(userUUID, link)
+	err = s.uploadToDB(userUUID, link)
 	if err != nil {
 		return err
 	}
 
-	err = s.produceAvatarRegistration(userUUID, link)
+	err = s.produceNewAvatar(userUUID, link)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func generateTimestampedFileName(filename string) string {
 	return fmt.Sprintf("%s_%s%s", timestamp, baseName, newExtension)
 }
 
-func (s *Service) updateAvatarInDB(userUUID, link string) error {
+func (s *Service) uploadToDB(userUUID, link string) error {
 	err := s.repository.SetAvatar(userUUID, link)
 	if err != nil {
 		return fmt.Errorf("error s.repository.SetAvatar: %w", err)
@@ -116,7 +116,7 @@ func (s *Service) updateAvatarInDB(userUUID, link string) error {
 	return nil
 }
 
-func (s *Service) produceAvatarRegistration(userUUID, link string) error {
+func (s *Service) produceNewAvatar(userUUID, link string) error {
 	msg := &new_avatar_register.NewAvatarRegister{
 		Uuid: userUUID,
 		Link: link,
@@ -136,4 +136,34 @@ func (s *Service) GetAllAvatars(ctx context.Context,
 	avatars, err := s.repository.GetAllAvatars(in.UserUuid)
 
 	return &avatarproto.GetAllAvatarsOut{AvatarList: avatars}, err
+}
+
+func (s *Service) DeleteAvatar(ctx context.Context, in *avatarproto.DeleteAvatarIn) (*avatarproto.Avatar, error) {
+	avatarInfo, err := s.repository.GetAvatarData(int(in.AvatarId))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get avatar data: %w", err)
+	}
+
+	err = s.s3Client.DeleteAvatar(ctx, avatarInfo.Link)
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete avatar in s3: %w", err)
+	}
+
+	err = s.repository.DeleteAvatar(avatarInfo.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete avatar in db: %w", err)
+	}
+
+	latestAvatar := s.repository.GetLatestAvatar(avatarInfo.UserUUID)
+	err = s.produceNewAvatar(avatarInfo.UserUUID, latestAvatar)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to produce avatar: %w", err)
+	}
+
+	return &avatarproto.Avatar{
+		//nolint: gosec
+		Id:   int32(avatarInfo.ID),
+		Link: avatarInfo.Link,
+	}, err
 }
