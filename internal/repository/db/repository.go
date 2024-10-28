@@ -111,8 +111,12 @@ func (r *Repository) GetLatestAvatar(userUUID string) string {
 
 	err := r.connection.Get(&link, query, userUUID)
 	if err != nil {
-		return "" // todo сюда можно хуйнуть дефолтную аву. Продумать как сделать
+		return getDefaultAvatar()
 	}
 
 	return link
+}
+
+func getDefaultAvatar() string {
+	return "https://storage.yandexcloud.net/space21/avatars/default/logo-discord.jpeg"
 }
