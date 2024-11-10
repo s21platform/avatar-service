@@ -8,6 +8,7 @@ import (
 
 type key string
 
+const KeyUUID key = key("uuid")
 const KeyMetrics key = key("metrics")
 
 type Config struct {

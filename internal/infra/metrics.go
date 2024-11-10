@@ -10,7 +10,12 @@ import (
 	"google.golang.org/grpc"
 )
 
-func MetricsInterceptor(metrics *pkg.Metrics) func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+func MetricsInterceptor(metrics *pkg.Metrics) func(
+	ctx context.Context,
+	req interface{},
+	info *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler,
+) (interface{}, error) {
 	return func(
 		ctx context.Context,
 		req interface{},

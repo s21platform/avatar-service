@@ -41,7 +41,7 @@ func main() {
 	avatarService := service.New(s3Client, dbRepo, producerNewFriendRegister)
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			//infra.AuthInterceptor,
+			infra.AuthInterceptor,
 			infra.MetricsInterceptor(metrics),
 		),
 	)
