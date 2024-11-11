@@ -31,7 +31,7 @@ func main() {
 	}
 	defer dbRepo.Close()
 
-	metrics, err := pkg.NewMetrics(cfg.Metrics.Host, cfg.Metrics.Port, "user", cfg.Platform.Env)
+	metrics, err := pkg.NewMetrics(cfg.Metrics.Host, cfg.Metrics.Port, "avatar", cfg.Platform.Env)
 	if err != nil {
 		log.Printf("failed to create metrics object: %v", err)
 	}
