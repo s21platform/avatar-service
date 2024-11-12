@@ -44,6 +44,9 @@ func main() {
 			infra.AuthInterceptor,
 			infra.MetricsInterceptor(metrics),
 		),
+		grpc.ChainStreamInterceptor(
+			infra.MetricsStreamInterceptor(metrics),
+		),
 	)
 
 	avatarproto.RegisterAvatarServiceServer(grpcServer, avatarService)
