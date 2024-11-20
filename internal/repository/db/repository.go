@@ -2,14 +2,13 @@ package db
 
 import (
 	"avatar_service/internal/config"
-	modelAvatar "avatar_service/internal/model/avatar"
+	"avatar_service/internal/model"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Импорт драйвера PostgreSQL для использования в пакете database/sql
-	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
 )
 
 type Repository struct {
@@ -67,8 +66,8 @@ func (r *Repository) SetAvatar(userUUID, link string) error {
 	return nil
 }
 
-func (r *Repository) GetAllAvatars(userUUID string) ([]*avatarproto.Avatar, error) {
-	var avatars []*avatarproto.Avatar
+func (r *Repository) GetAllAvatars(userUUID string) (model.AvatarInfoList, error) {
+	var avatars model.AvatarInfoList
 
 	query := `SELECT id, link FROM avatar WHERE user_uuid = $1 ORDER BY link DESC`
 
@@ -80,8 +79,8 @@ func (r *Repository) GetAllAvatars(userUUID string) ([]*avatarproto.Avatar, erro
 	return avatars, nil
 }
 
-func (r *Repository) GetAvatarData(avatarID int) (*modelAvatar.Info, error) {
-	var avatarInfo modelAvatar.Info
+func (r *Repository) GetAvatarData(avatarID int) (*model.AvatarInfo, error) {
+	var avatarInfo model.AvatarInfo
 
 	query := `SELECT id, user_uuid, link, create_at FROM avatar WHERE id = $1`
 	err := r.connection.Get(&avatarInfo, query, avatarID)

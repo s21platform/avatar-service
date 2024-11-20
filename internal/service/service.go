@@ -133,9 +133,15 @@ func (s *Service) produceNewAvatar(userUUID, link string) error {
 func (s *Service) GetAllAvatars(ctx context.Context,
 	in *avatarproto.GetAllAvatarsIn) (*avatarproto.GetAllAvatarsOut, error) {
 	_ = ctx
-	avatars, err := s.repository.GetAllAvatars(in.UserUuid)
 
-	return &avatarproto.GetAllAvatarsOut{AvatarList: avatars}, err
+	avatars, err := s.repository.GetAllAvatars(in.UserUuid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all avatars: %w", err)
+	}
+
+	return &avatarproto.GetAllAvatarsOut{
+		AvatarList: avatars.FromDTO(),
+	}, nil
 }
 
 func (s *Service) DeleteAvatar(ctx context.Context, in *avatarproto.DeleteAvatarIn) (*avatarproto.Avatar, error) {

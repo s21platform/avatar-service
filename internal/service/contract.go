@@ -1,16 +1,14 @@
 package service
 
 import (
-	modelAvatar "avatar_service/internal/model/avatar"
+	"avatar_service/internal/model"
 	"context"
-
-	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
 )
 
 type DBRepo interface {
 	SetAvatar(userUUID, link string) error
-	GetAllAvatars(userUUID string) ([]*avatarproto.Avatar, error)
-	GetAvatarData(avatarID int) (*modelAvatar.Info, error)
+	GetAllAvatars(userUUID string) (model.AvatarInfoList, error)
+	GetAvatarData(avatarID int) (*model.AvatarInfo, error)
 	DeleteAvatar(avatarID int) error
 	GetLatestAvatar(userUUID string) string
 }

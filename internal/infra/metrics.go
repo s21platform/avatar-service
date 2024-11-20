@@ -2,11 +2,10 @@ package infra
 
 import (
 	"avatar_service/internal/config"
+	modelMetrics "avatar_service/internal/model"
 	"context"
 	"strings"
 	"time"
-
-	modelMetrics "avatar_service/internal/model/metrics"
 
 	"github.com/s21platform/metrics-lib/pkg"
 	"google.golang.org/grpc"

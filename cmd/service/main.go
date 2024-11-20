@@ -33,7 +33,7 @@ func main() {
 
 	metrics, err := pkg.NewMetrics(cfg.Metrics.Host, cfg.Metrics.Port, "avatar", cfg.Platform.Env)
 	if err != nil {
-		log.Printf("failed to create metrics object: %v", err)
+		log.Fatalln("failed to create metrics object: ", err)
 	}
 
 	producerNewFriendRegister := kafkalib.NewProducer(cfg.Kafka.Server, cfg.Kafka.AvatarNewSet)
