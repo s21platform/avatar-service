@@ -66,7 +66,7 @@ func (r *Repository) SetAvatar(userUUID, link string) error {
 	return nil
 }
 
-func (r *Repository) GetAllAvatars(userUUID string) (model.AvatarInfoList, error) {
+func (r *Repository) GetAllAvatars(userUUID string) (*model.AvatarInfoList, error) {
 	var avatars model.AvatarInfoList
 
 	query := `SELECT id, link FROM avatar WHERE user_uuid = $1 ORDER BY link DESC`
@@ -76,7 +76,7 @@ func (r *Repository) GetAllAvatars(userUUID string) (model.AvatarInfoList, error
 		return nil, fmt.Errorf("failed to fetch avatars from database: %w", err)
 	}
 
-	return avatars, nil
+	return &avatars, nil
 }
 
 func (r *Repository) GetAvatarData(avatarID int) (*model.AvatarInfo, error) {

@@ -15,10 +15,10 @@ type AvatarInfo struct {
 	CreatedAt time.Time `db:"create_at"`
 }
 
-func (a AvatarInfoList) FromDTO() []*avatarproto.Avatar {
-	result := make([]*avatarproto.Avatar, 0, len(a))
+func (a *AvatarInfoList) FromDTO() []*avatarproto.Avatar {
+	result := make([]*avatarproto.Avatar, 0, len(*a))
 
-	for _, avatar := range a {
+	for _, avatar := range *a {
 		result = append(result, avatar.ToProto())
 	}
 
