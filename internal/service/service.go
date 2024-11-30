@@ -65,7 +65,7 @@ func (s *Service) receiveData(stream avatarproto.AvatarService_SetAvatarServer) 
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return "", "", nil, fmt.Errorf("error stream.Recv: %w", err)
+			return "", "", nil, fmt.Errorf("failed to receive data from stream: %w", err)
 		}
 
 		if userUUID == "" && filename == "" {
@@ -86,7 +86,7 @@ func (s *Service) uploadToS3(userUUID, filename string, imageData []byte) (strin
 
 	link, err := s.s3Client.UploadFile(context.Background(), bucketName, objectName, imageData, contentType)
 	if err != nil {
-		return "", fmt.Errorf("error s.s3Client.UploadFile: %w", err)
+		return "", fmt.Errorf("failed to upload file to S3: %w", err)
 	}
 
 	return link, nil
@@ -110,7 +110,7 @@ func generateTimestampedFileName(filename string) string {
 func (s *Service) uploadToDB(userUUID, link string) error {
 	err := s.repository.SetAvatar(userUUID, link)
 	if err != nil {
-		return fmt.Errorf("error s.repository.SetAvatar: %w", err)
+		return fmt.Errorf("failed to save avatar to database: %w", err)
 	}
 
 	return nil
@@ -133,9 +133,15 @@ func (s *Service) produceNewAvatar(userUUID, link string) error {
 func (s *Service) GetAllAvatars(ctx context.Context,
 	in *avatarproto.GetAllAvatarsIn) (*avatarproto.GetAllAvatarsOut, error) {
 	_ = ctx
-	avatars, err := s.repository.GetAllAvatars(in.UserUuid)
 
-	return &avatarproto.GetAllAvatarsOut{AvatarList: avatars}, err
+	avatars, err := s.repository.GetAllAvatars(in.UserUuid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all avatars: %w", err)
+	}
+
+	return &avatarproto.GetAllAvatarsOut{
+		AvatarList: avatars.FromDTO(),
+	}, nil
 }
 
 func (s *Service) DeleteAvatar(ctx context.Context, in *avatarproto.DeleteAvatarIn) (*avatarproto.Avatar, error) {
@@ -162,7 +168,6 @@ func (s *Service) DeleteAvatar(ctx context.Context, in *avatarproto.DeleteAvatar
 	}
 
 	return &avatarproto.Avatar{
-		//nolint: gosec
 		Id:   int32(avatarInfo.ID),
 		Link: avatarInfo.Link,
 	}, err

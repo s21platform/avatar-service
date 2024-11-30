@@ -2,14 +2,13 @@ package db
 
 import (
 	"avatar_service/internal/config"
-	modelAvatar "avatar_service/internal/model/avatar"
+	"avatar_service/internal/model"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Импорт драйвера PostgreSQL для использования в пакете database/sql
-	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
 )
 
 type Repository struct {
@@ -27,7 +26,7 @@ func New(cfg *config.Config) (*Repository, error) {
 			break
 		}
 
-		log.Println("error connect(cfg) ", err)
+		log.Println("failed to connect to database: ", err)
 		time.Sleep(500 * time.Millisecond)
 	}
 
@@ -46,7 +45,7 @@ func connect(cfg *config.Config) (*Repository, error) {
 
 	db, err := sqlx.Connect("postgres", conStr)
 	if err != nil {
-		return nil, fmt.Errorf("error sql.Open: %w", err)
+		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
 
 	return &Repository{connection: db}, err
@@ -61,27 +60,27 @@ func (r *Repository) SetAvatar(userUUID, link string) error {
 	_, err := r.connection.Exec(query, userUUID, link)
 
 	if err != nil {
-		return fmt.Errorf("error r.connection.Exec: %w", err)
+		return fmt.Errorf("failed to insert avatar into database: %w", err)
 	}
 
 	return nil
 }
 
-func (r *Repository) GetAllAvatars(userUUID string) ([]*avatarproto.Avatar, error) {
-	var avatars []*avatarproto.Avatar
+func (r *Repository) GetAllAvatars(userUUID string) (*model.AvatarInfoList, error) {
+	var avatars model.AvatarInfoList
 
 	query := `SELECT id, link FROM avatar WHERE user_uuid = $1 ORDER BY link DESC`
 
 	err := r.connection.Select(&avatars, query, userUUID)
 	if err != nil {
-		return nil, fmt.Errorf("error r.connection.Select: %w", err)
+		return nil, fmt.Errorf("failed to fetch avatars from database: %w", err)
 	}
 
-	return avatars, nil
+	return &avatars, nil
 }
 
-func (r *Repository) GetAvatarData(avatarID int) (*modelAvatar.Info, error) {
-	var avatarInfo modelAvatar.Info
+func (r *Repository) GetAvatarData(avatarID int) (*model.AvatarInfo, error) {
+	var avatarInfo model.AvatarInfo
 
 	query := `SELECT id, user_uuid, link, create_at FROM avatar WHERE id = $1`
 	err := r.connection.Get(&avatarInfo, query, avatarID)

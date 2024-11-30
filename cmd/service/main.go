@@ -22,18 +22,18 @@ func main() {
 
 	s3Client, err := s3.New(cfg)
 	if err != nil {
-		log.Fatalln("error s3.New: ", err)
+		log.Fatalln("failed to create S3 client: ", err)
 	}
 
 	dbRepo, err := db.New(cfg)
 	if err != nil {
-		log.Fatalln("error db.New: ", err)
+		log.Fatalln("failed to initialize database repository: ", err)
 	}
 	defer dbRepo.Close()
 
 	metrics, err := pkg.NewMetrics(cfg.Metrics.Host, cfg.Metrics.Port, "avatar", cfg.Platform.Env)
 	if err != nil {
-		log.Printf("failed to create metrics object: %v", err)
+		log.Fatalln("failed to create metrics object: ", err)
 	}
 
 	producerNewFriendRegister := kafkalib.NewProducer(cfg.Kafka.Server, cfg.Kafka.AvatarNewSet)
@@ -53,10 +53,10 @@ func main() {
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Service.Port))
 	if err != nil {
-		log.Println("error net.Listen: ", err)
+		log.Println("failed to start TCP listener: ", err)
 	}
 
 	if err := grpcServer.Serve(listener); err != nil {
-		log.Println("error grpcServer.Serve: ", err)
+		log.Println("failed to start grpc server: ", err)
 	}
 }

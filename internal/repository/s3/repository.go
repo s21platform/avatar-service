@@ -40,7 +40,7 @@ func createMinioClient(cfg *config.Config) (*minio.Client, error) {
 		Secure: true,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error minio.New: %w", err)
+		return nil, fmt.Errorf("failed to create Minio client: %w", err)
 	}
 
 	return minioClient, nil
@@ -78,7 +78,7 @@ func convertToWebP(imageData []byte) ([]byte, error) {
 func decodeImage(data []byte) (image.Image, error) {
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return nil, fmt.Errorf("error image.Decode: %w", err)
+		return nil, fmt.Errorf("failed to decode image: %w", err)
 	}
 
 	return img, nil
@@ -90,12 +90,12 @@ func encodeToWebP(img image.Image) ([]byte, error) {
 	options, err := encoder.NewLossyEncoderOptions(encoder.PresetDefault, 100)
 
 	if err != nil {
-		return nil, fmt.Errorf("error encoder.NewLossyEncoderOptions: %w", err)
+		return nil, fmt.Errorf("failed to create encoder options: %w", err)
 	}
 
 	err = webp.Encode(&buf, img, options)
 	if err != nil {
-		return nil, fmt.Errorf("error webp.Encode: %w", err)
+		return nil, fmt.Errorf("failed to encode image: %w", err)
 	}
 
 	return buf.Bytes(), nil
@@ -110,7 +110,7 @@ func (c *Client) uploadToS3(ctx context.Context, bucketName, objectName string, 
 		ContentType: contentType,
 	})
 	if err != nil {
-		return fmt.Errorf("error c.MinioClient.PutObject: %w", err)
+		return fmt.Errorf("failed to put object into S3: %w", err)
 	}
 
 	return nil

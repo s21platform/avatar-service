@@ -57,7 +57,7 @@ func MustLoad() *Config {
 	err := cleanenv.ReadEnv(cfg)
 
 	if err != nil {
-		log.Fatalln("error cleanenv.ReadEnv: ", err)
+		log.Fatalln("failed to load environment variables into configuration: ", err)
 	}
 
 	return cfg
