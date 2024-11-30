@@ -19,16 +19,11 @@ func (a *AvatarInfoList) FromDTO() []*avatarproto.Avatar {
 	result := make([]*avatarproto.Avatar, 0, len(*a))
 
 	for _, avatar := range *a {
-		result = append(result, avatar.ToProto())
+		result = append(result, &avatarproto.Avatar{
+			Id:   int32(avatar.ID),
+			Link: avatar.Link,
+		})
 	}
 
 	return result
-}
-
-func (a *AvatarInfo) ToProto() *avatarproto.Avatar {
-	return &avatarproto.Avatar{
-		//nolint: gosec
-		Id:   int32(a.ID),
-		Link: a.Link,
-	}
 }
