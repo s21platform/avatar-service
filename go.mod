@@ -10,8 +10,9 @@ require (
 	github.com/minio/minio-go/v7 v7.0.79
 	github.com/s21platform/avatar-proto v0.0.8
 	github.com/s21platform/kafka-lib v0.0.4
+	github.com/s21platform/metrics-lib v0.0.6
 	github.com/s21platform/user-proto v0.0.7
-	google.golang.org/grpc v1.67.1
+	google.golang.org/grpc v1.68.0
 )
 
 require (
@@ -23,6 +24,7 @@ require (
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
+	github.com/marpaia/graphite-golang v0.0.0-20190519024811-caf161d2c2b1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/rs/xid v1.6.0 // indirect
