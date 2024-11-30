@@ -168,7 +168,6 @@ func (s *Service) DeleteAvatar(ctx context.Context, in *avatarproto.DeleteAvatar
 	}
 
 	return &avatarproto.Avatar{
-		//nolint: gosec
 		Id:   int32(avatarInfo.ID),
 		Link: avatarInfo.Link,
 	}, err
