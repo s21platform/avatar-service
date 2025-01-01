@@ -20,7 +20,7 @@ import (
 func main() {
 	cfg := config.MustLoad()
 
-	s3Client, err := s3.New(cfg)
+	s3Client := s3.New(cfg)
 
 	dbRepo := postgres.New(cfg)
 	defer dbRepo.Close()

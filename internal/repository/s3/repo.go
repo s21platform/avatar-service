@@ -22,13 +22,13 @@ type Client struct {
 	MinioClient *minio.Client
 }
 
-func New(cfg *config.Config) (*Client, error) {
+func New(cfg *config.Config) *Client {
 	minioClient, err := createMinioClient(cfg)
 	if err != nil {
 		log.Fatal("failed to create S3 client: ", err)
 	}
 
-	return &Client{MinioClient: minioClient}, nil
+	return &Client{MinioClient: minioClient}
 }
 
 func createMinioClient(cfg *config.Config) (*minio.Client, error) {
