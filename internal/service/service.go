@@ -157,7 +157,7 @@ func (s *Service) DeleteAvatar(ctx context.Context, in *avatarproto.DeleteAvatar
 
 	err = s.repository.DeleteAvatar(avatarInfo.ID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to delete avatar in db: %w", err)
+		return nil, fmt.Errorf("failed to delete avatar in postgres: %w", err)
 	}
 
 	latestAvatar := s.repository.GetLatestAvatar(avatarInfo.UserUUID)

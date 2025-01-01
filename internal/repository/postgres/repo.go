@@ -1,11 +1,10 @@
-package db
+package postgres
 
 import (
 	"avatar_service/internal/config"
 	"avatar_service/internal/model"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Импорт драйвера PostgreSQL для использования в пакете database/sql
@@ -15,40 +14,18 @@ type Repository struct {
 	connection *sqlx.DB
 }
 
-func New(cfg *config.Config) (*Repository, error) {
-	var err error
+func New(cfg *config.Config) *Repository {
+	conStr := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable",
+		cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.Database, cfg.Postgres.Host, cfg.Postgres.Port)
 
-	var repo *Repository
-
-	for i := 0; i < 5; i++ {
-		repo, err = connect(cfg)
-		if err == nil {
-			break
-		}
-
-		log.Println("failed to connect to database: ", err)
-		time.Sleep(500 * time.Millisecond)
-	}
-
-	return repo, err
-}
-
-func connect(cfg *config.Config) (*Repository, error) {
-	conStr := fmt.Sprintf(
-		"user=%s password=%s dbname=%s host=%s port=%s sslmode=disable",
-		cfg.Postgres.User,
-		cfg.Postgres.Password,
-		cfg.Postgres.Database,
-		cfg.Postgres.Host,
-		cfg.Postgres.Port,
-	)
-
-	db, err := sqlx.Connect("postgres", conStr)
+	conn, err := sqlx.Connect("postgres", conStr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database connection: %w", err)
+		log.Fatal("error connect: ", err)
 	}
 
-	return &Repository{connection: db}, err
+	return &Repository{
+		connection: conn,
+	}
 }
 
 func (r *Repository) Close() {
@@ -97,7 +74,7 @@ func (r *Repository) DeleteAvatar(avatarID int) error {
 	_, err := r.connection.Exec(query, avatarID)
 
 	if err != nil {
-		return fmt.Errorf("failed to delete avatar from db: %w", err)
+		return fmt.Errorf("failed to delete avatar from postgres: %w", err)
 	}
 
 	return nil
