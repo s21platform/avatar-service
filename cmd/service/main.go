@@ -3,7 +3,7 @@ package main
 import (
 	"avatar_service/internal/config"
 	"avatar_service/internal/infra"
-	"avatar_service/internal/repository/db"
+	"avatar_service/internal/repository/postgres"
 	"avatar_service/internal/repository/s3"
 	"avatar_service/internal/service"
 	"fmt"
@@ -20,15 +20,9 @@ import (
 func main() {
 	cfg := config.MustLoad()
 
-	s3Client, err := s3.New(cfg)
-	if err != nil {
-		log.Fatalln("failed to create S3 client: ", err)
-	}
+	s3Client := s3.New(cfg)
 
-	dbRepo, err := db.New(cfg)
-	if err != nil {
-		log.Fatalln("failed to initialize database repository: ", err)
-	}
+	dbRepo := postgres.New(cfg)
 	defer dbRepo.Close()
 
 	metrics, err := pkg.NewMetrics(cfg.Metrics.Host, cfg.Metrics.Port, "avatar", cfg.Platform.Env)
@@ -56,7 +50,7 @@ func main() {
 		log.Println("failed to start TCP listener: ", err)
 	}
 
-	if err := grpcServer.Serve(listener); err != nil {
+	if err = grpcServer.Serve(listener); err != nil {
 		log.Println("failed to start grpc server: ", err)
 	}
 }

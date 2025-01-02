@@ -6,11 +6,6 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-type key string
-
-const KeyUUID key = key("uuid")
-const KeyMetrics key = key("metrics")
-
 type Config struct {
 	Service   Service
 	Postgres  Postgres
@@ -57,7 +52,7 @@ func MustLoad() *Config {
 	err := cleanenv.ReadEnv(cfg)
 
 	if err != nil {
-		log.Fatalln("failed to load environment variables into configuration: ", err)
+		log.Fatalf("failed to read env variables: %s", err)
 	}
 
 	return cfg

@@ -8,6 +8,7 @@ import (
 	"image"
 	_ "image/jpeg" // Регистрация формата jpeg для декодирования изображения в convertToWebP()
 	_ "image/png"  // Регистрация формата png для декодирования изображения в convertToWebP()
+	"log"
 	"net/url"
 	"strings"
 
@@ -21,13 +22,13 @@ type Client struct {
 	MinioClient *minio.Client
 }
 
-func New(cfg *config.Config) (*Client, error) {
+func New(cfg *config.Config) *Client {
 	minioClient, err := createMinioClient(cfg)
 	if err != nil {
-		return nil, err
+		log.Fatal("failed to create S3 client: ", err)
 	}
 
-	return &Client{MinioClient: minioClient}, nil
+	return &Client{MinioClient: minioClient}
 }
 
 func createMinioClient(cfg *config.Config) (*minio.Client, error) {
