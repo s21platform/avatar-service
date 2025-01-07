@@ -31,11 +31,13 @@ type S3Storage struct {
 	Endpoint        string `env:"AVATAR_SERVICE_S3_STORAGE_ENDPOINT"`
 	AccessKeyID     string `env:"AVATAR_SERVICE_S3_STORAGE_ACCESS_KEY_ID"`
 	SecretAccessKey string `env:"AVATAR_SERVICE_S3_STORAGE_ACCESS_KEY_SECRET"`
+	BucketName      string `env:"AVATAR_SERVICE_BUCKET"`
 }
 
 type Kafka struct {
-	AvatarNewSet string `env:"AVATAR_SET_NEW"`
-	Server       string `env:"KAFKA_SERVER"`
+	UserNewSet    string `env:"AVATAR_SET_NEW_USER"`
+	SocietyNewSet string `env:"AVATAR_SET_NEW_SOCIETY"`
+	Server        string `env:"KAFKA_SERVER"`
 }
 
 type Metrics struct {

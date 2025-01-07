@@ -6,11 +6,17 @@ import (
 )
 
 type DBRepo interface {
-	SetAvatar(userUUID, link string) error
-	GetAllAvatars(userUUID string) (*model.AvatarInfoList, error)
-	GetAvatarData(avatarID int) (*model.AvatarInfo, error)
-	DeleteAvatar(avatarID int) error
-	GetLatestAvatar(userUUID string) string
+	SetUserAvatar(UUID, link string) error
+	GetAllUserAvatars(UUID string) (*model.AvatarInfoList, error)
+	GetUserAvatarData(avatarID int) (*model.AvatarInfo, error)
+	DeleteUserAvatar(avatarID int) error
+	GetLatestUserAvatar(UUID string) string
+
+	SetSocietyAvatar(UUID, link string) error
+	GetAllSocietyAvatars(UUID string) (*model.AvatarInfoList, error)
+	GetSocietyAvatarData(avatarID int) (*model.AvatarInfo, error)
+	DeleteSocietyAvatar(avatarID int) error
+	GetLatestSocietyAvatar(UUID string) string
 }
 
 type S3Storage interface {

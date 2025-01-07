@@ -10,10 +10,9 @@ import (
 	"log"
 	"net"
 
+	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
 	kafkalib "github.com/s21platform/kafka-lib"
 	"github.com/s21platform/metrics-lib/pkg"
-
-	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
 	"google.golang.org/grpc"
 )
 
@@ -30,9 +29,10 @@ func main() {
 		log.Fatalln("failed to create metrics object: ", err)
 	}
 
-	producerNewFriendRegister := kafkalib.NewProducer(cfg.Kafka.Server, cfg.Kafka.AvatarNewSet)
+	producerNewUserAvatarRegister := kafkalib.NewProducer(cfg.Kafka.Server, cfg.Kafka.UserNewSet)
+	producerNewSocietyAvatarRegister := kafkalib.NewProducer(cfg.Kafka.Server, cfg.Kafka.SocietyNewSet)
 
-	avatarService := service.New(s3Client, dbRepo, producerNewFriendRegister)
+	avatarService := service.New(s3Client, dbRepo, producerNewUserAvatarRegister, producerNewSocietyAvatarRegister, cfg.S3Storage.BucketName)
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			infra.AuthInterceptor,
