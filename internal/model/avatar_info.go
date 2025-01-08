@@ -10,7 +10,7 @@ type AvatarInfoList []AvatarInfo
 
 type AvatarInfo struct {
 	ID        int       `db:"id"`
-	UserUUID  string    `db:"user_uuid"`
+	UUID      string    `db:"uuid"`
 	Link      string    `db:"link"`
 	CreatedAt time.Time `db:"create_at"`
 }

@@ -7,7 +7,7 @@ import (
 	"log"
 
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq" // Импорт драйвера PostgreSQL для использования в пакете database/sql
+	_ "github.com/lib/pq" // Импорт драйвера PostgreSQL
 )
 
 type Repository struct {
@@ -32,9 +32,9 @@ func (r *Repository) Close() {
 	_ = r.connection.Close()
 }
 
-func (r *Repository) SetAvatar(userUUID, link string) error {
-	query := `INSERT INTO avatar (user_uuid, link) VALUES ($1, $2)`
-	_, err := r.connection.Exec(query, userUUID, link)
+func (r *Repository) SetUserAvatar(UUID, link string) error {
+	query := `INSERT INTO users (uuid, link) VALUES ($1, $2)`
+	_, err := r.connection.Exec(query, UUID, link)
 
 	if err != nil {
 		return fmt.Errorf("failed to insert avatar into database: %w", err)
@@ -43,12 +43,12 @@ func (r *Repository) SetAvatar(userUUID, link string) error {
 	return nil
 }
 
-func (r *Repository) GetAllAvatars(userUUID string) (*model.AvatarInfoList, error) {
+func (r *Repository) GetAllUserAvatars(UUID string) (*model.AvatarInfoList, error) {
 	var avatars model.AvatarInfoList
 
-	query := `SELECT id, link FROM avatar WHERE user_uuid = $1 ORDER BY link DESC`
+	query := `SELECT id, link FROM users WHERE uuid = $1 ORDER BY link DESC`
 
-	err := r.connection.Select(&avatars, query, userUUID)
+	err := r.connection.Select(&avatars, query, UUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch avatars from database: %w", err)
 	}
@@ -56,10 +56,10 @@ func (r *Repository) GetAllAvatars(userUUID string) (*model.AvatarInfoList, erro
 	return &avatars, nil
 }
 
-func (r *Repository) GetAvatarData(avatarID int) (*model.AvatarInfo, error) {
+func (r *Repository) GetUserAvatarData(avatarID int) (*model.AvatarInfo, error) {
 	var avatarInfo model.AvatarInfo
 
-	query := `SELECT id, user_uuid, link, create_at FROM avatar WHERE id = $1`
+	query := `SELECT id, uuid, link, create_at FROM users WHERE id = $1`
 	err := r.connection.Get(&avatarInfo, query, avatarID)
 
 	if err != nil {
@@ -69,8 +69,8 @@ func (r *Repository) GetAvatarData(avatarID int) (*model.AvatarInfo, error) {
 	return &avatarInfo, nil
 }
 
-func (r *Repository) DeleteAvatar(avatarID int) error {
-	query := `DELETE FROM avatar WHERE id = $1`
+func (r *Repository) DeleteUserAvatar(avatarID int) error {
+	query := `DELETE FROM users WHERE id = $1`
 	_, err := r.connection.Exec(query, avatarID)
 
 	if err != nil {
@@ -80,12 +80,73 @@ func (r *Repository) DeleteAvatar(avatarID int) error {
 	return nil
 }
 
-func (r *Repository) GetLatestAvatar(userUUID string) string {
+func (r *Repository) GetLatestUserAvatar(UUID string) string {
 	var link string
 
-	query := `SELECT link FROM avatar WHERE user_uuid = $1 ORDER BY create_at DESC LIMIT 1`
+	query := `SELECT link FROM users WHERE uuid = $1 ORDER BY create_at DESC LIMIT 1`
 
-	err := r.connection.Get(&link, query, userUUID)
+	err := r.connection.Get(&link, query, UUID)
+	if err != nil {
+		return getDefaultAvatar()
+	}
+
+	return link
+}
+
+func (r *Repository) SetSocietyAvatar(UUID, link string) error {
+	query := `INSERT INTO society (uuid, link) VALUES ($1, $2)`
+	_, err := r.connection.Exec(query, UUID, link)
+
+	if err != nil {
+		return fmt.Errorf("failed to insert avatar into database: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Repository) GetAllSocietyAvatars(UUID string) (*model.AvatarInfoList, error) {
+	var avatars model.AvatarInfoList
+
+	query := `SELECT id, link FROM society WHERE uuid = $1 ORDER BY link DESC`
+
+	err := r.connection.Select(&avatars, query, UUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch avatars from database: %w", err)
+	}
+
+	return &avatars, nil
+}
+
+func (r *Repository) GetSocietyAvatarData(avatarID int) (*model.AvatarInfo, error) {
+	var avatarInfo model.AvatarInfo
+
+	query := `SELECT id, uuid, link, create_at FROM society WHERE id = $1`
+	err := r.connection.Get(&avatarInfo, query, avatarID)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get avatar data: %w", err)
+	}
+
+	return &avatarInfo, nil
+}
+
+func (r *Repository) DeleteSocietyAvatar(avatarID int) error {
+	query := `DELETE FROM society WHERE id = $1`
+	_, err := r.connection.Exec(query, avatarID)
+
+	if err != nil {
+		return fmt.Errorf("failed to delete avatar from postgres: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Repository) GetLatestSocietyAvatar(UUID string) string {
+	var link string
+
+	query := `SELECT link FROM society WHERE uuid = $1 ORDER BY create_at DESC LIMIT 1`
+
+	err := r.connection.Get(&link, query, UUID)
 	if err != nil {
 		return getDefaultAvatar()
 	}
