@@ -88,7 +88,7 @@ func decodeImage(data []byte) (image.Image, error) {
 func encodeToWebP(img image.Image) ([]byte, error) {
 	var buf bytes.Buffer
 
-	options, err := encoder.NewLossyEncoderOptions(encoder.PresetDefault, 100)
+	options, err := encoder.NewLossyEncoderOptions(encoder.PresetDefault, 75)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create encoder options: %w", err)
