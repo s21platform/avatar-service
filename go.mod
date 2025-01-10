@@ -10,6 +10,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.79
 	github.com/s21platform/avatar-proto v0.0.10
 	github.com/s21platform/kafka-lib v0.0.4
+	github.com/s21platform/logger-lib v0.0.3
 	github.com/s21platform/metrics-lib v0.0.6
 	github.com/s21platform/user-proto v0.0.7
 	google.golang.org/grpc v1.69.2

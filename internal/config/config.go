@@ -12,11 +12,13 @@ type Config struct {
 	S3Storage S3Storage
 	Kafka     Kafka
 	Metrics   Metrics
+	Logger    Logger
 	Platform  Platform
 }
 
 type Service struct {
 	Port string `env:"AVATAR_SERVICE_PORT"`
+	Name string `env:"AVATAR_SERVICE_NAME"`
 }
 
 type Postgres struct {
@@ -43,6 +45,11 @@ type Kafka struct {
 type Metrics struct {
 	Host string `env:"GRAFANA_HOST"`
 	Port int    `env:"GRAFANA_PORT"`
+}
+
+type Logger struct {
+	Host string `env:"LOGGER_SERVICE_HOST"`
+	Port string `env:"LOGGER_SERVICE_PORT"`
 }
 
 type Platform struct {

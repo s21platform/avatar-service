@@ -1,6 +1,7 @@
 package service
 
 import (
+	"avatar_service/internal/config"
 	"context"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
+	logger_lib "github.com/s21platform/logger-lib"
 	"github.com/s21platform/user-proto/user-proto/new_avatar_register"
 )
 
@@ -39,22 +41,29 @@ func New(s3Client S3Storage, repo DBRepo, userKafkaProducer NewAvatarRegisterSrv
 }
 
 func (s *Service) SetUserAvatar(stream avatarproto.AvatarService_SetUserAvatarServer) error {
+	logger := logger_lib.FromContext(stream.Context(), config.KeyLogger)
+	logger.AddFuncName("SetUserAvatar")
+
 	UUID, filename, imageData, err := s.receiveUserData(stream)
 	if err != nil {
+		logger.Error(fmt.Sprintf("%v", err))
 		return err
 	}
 
 	link, err := s.uploadToS3(UUID, filename, imageData, TypeUser)
 	if err != nil {
+		logger.Error(fmt.Sprintf("%v", err))
 		return err
 	}
 
 	if err = s.repository.SetUserAvatar(UUID, link); err != nil {
+		logger.Error(fmt.Sprintf("failed to save avatar to database: %v", err))
 		return fmt.Errorf("failed to save avatar to database: %w", err)
 	}
 
 	err = s.produceNewUserAvatar(UUID, link)
 	if err != nil {
+		logger.Error(fmt.Sprintf("%v", err))
 		return err
 	}
 
@@ -103,12 +112,13 @@ func (s *Service) produceNewUserAvatar(UUID, link string) error {
 	return nil
 }
 
-func (s *Service) GetAllUserAvatars(ctx context.Context,
-	in *avatarproto.GetAllUserAvatarsIn) (*avatarproto.GetAllUserAvatarsOut, error) {
-	_ = ctx
+func (s *Service) GetAllUserAvatars(ctx context.Context, in *avatarproto.GetAllUserAvatarsIn) (*avatarproto.GetAllUserAvatarsOut, error) {
+	logger := logger_lib.FromContext(ctx, config.KeyLogger)
+	logger.AddFuncName("GetAllUserAvatars")
 
 	avatars, err := s.repository.GetAllUserAvatars(in.Uuid)
 	if err != nil {
+		logger.Error(fmt.Sprintf("failed to get all user avatars: %v", err))
 		return nil, fmt.Errorf("failed to get all user avatars: %w", err)
 	}
 
@@ -118,18 +128,24 @@ func (s *Service) GetAllUserAvatars(ctx context.Context,
 }
 
 func (s *Service) DeleteUserAvatar(ctx context.Context, in *avatarproto.DeleteUserAvatarIn) (*avatarproto.Avatar, error) {
+	logger := logger_lib.FromContext(ctx, config.KeyLogger)
+	logger.AddFuncName("DeleteUserAvatar")
+
 	avatarInfo, err := s.repository.GetUserAvatarData(int(in.AvatarId))
 	if err != nil {
+		logger.Error(fmt.Sprintf("failed to get user avatar: %v", err))
 		return nil, fmt.Errorf("failed to get avatar data: %w", err)
 	}
 
 	err = s.s3Client.DeleteAvatar(ctx, avatarInfo.Link)
 	if err != nil {
+		logger.Error(fmt.Sprintf("failed to delete user avatar: %v", err))
 		return nil, fmt.Errorf("failed to delete avatar in s3: %w", err)
 	}
 
 	err = s.repository.DeleteUserAvatar(avatarInfo.ID)
 	if err != nil {
+		logger.Error(fmt.Sprintf("failed to delete user avatar: %v", err))
 		return nil, fmt.Errorf("failed to delete avatar in postgres: %w", err)
 	}
 
@@ -137,6 +153,7 @@ func (s *Service) DeleteUserAvatar(ctx context.Context, in *avatarproto.DeleteUs
 
 	err = s.produceNewUserAvatar(avatarInfo.UUID, latestAvatar)
 	if err != nil {
+		logger.Error(fmt.Sprintf("failed to delete user avatar: %v", err))
 		return nil, fmt.Errorf("failed to produce avatar: %w", err)
 	}
 
@@ -147,22 +164,29 @@ func (s *Service) DeleteUserAvatar(ctx context.Context, in *avatarproto.DeleteUs
 }
 
 func (s *Service) SetSocietyAvatar(stream avatarproto.AvatarService_SetSocietyAvatarServer) error {
+	logger := logger_lib.FromContext(stream.Context(), config.KeyLogger)
+	logger.AddFuncName("SetSocietyAvatar")
+
 	UUID, filename, imageData, err := s.receiveSocietyData(stream)
 	if err != nil {
+		logger.Error(fmt.Sprintf("%v", err))
 		return err
 	}
 
 	link, err := s.uploadToS3(UUID, filename, imageData, TypeSociety)
 	if err != nil {
+		logger.Error(fmt.Sprintf("%v", err))
 		return err
 	}
 
 	if err = s.repository.SetSocietyAvatar(UUID, link); err != nil {
+		logger.Error(fmt.Sprintf("failed to save avatar to database: %v", err))
 		return fmt.Errorf("failed to save avatar to database: %w", err)
 	}
 
 	err = s.produceNewSocietyAvatar(UUID, link)
 	if err != nil {
+		logger.Error(fmt.Sprintf("%v", err))
 		return err
 	}
 
@@ -212,12 +236,13 @@ func (s *Service) produceNewSocietyAvatar(UUID, link string) error {
 	return nil
 }
 
-func (s *Service) GetAllSocietyAvatars(ctx context.Context,
-	in *avatarproto.GetAllSocietyAvatarsIn) (*avatarproto.GetAllSocietyAvatarsOut, error) {
-	_ = ctx
+func (s *Service) GetAllSocietyAvatars(ctx context.Context, in *avatarproto.GetAllSocietyAvatarsIn) (*avatarproto.GetAllSocietyAvatarsOut, error) {
+	logger := logger_lib.FromContext(ctx, config.KeyLogger)
+	logger.AddFuncName("GetAllSocietyAvatars")
 
 	avatars, err := s.repository.GetAllSocietyAvatars(in.Uuid)
 	if err != nil {
+		logger.Error(fmt.Sprintf("failed to get all society avatars: %v", err))
 		return nil, fmt.Errorf("failed to get all society avatars: %w", err)
 	}
 
@@ -227,18 +252,24 @@ func (s *Service) GetAllSocietyAvatars(ctx context.Context,
 }
 
 func (s *Service) DeleteSocietyAvatar(ctx context.Context, in *avatarproto.DeleteSocietyAvatarIn) (*avatarproto.Avatar, error) {
+	logger := logger_lib.FromContext(ctx, config.KeyLogger)
+	logger.AddFuncName("DeleteSocietyAvatar")
+
 	avatarInfo, err := s.repository.GetSocietyAvatarData(int(in.AvatarId))
 	if err != nil {
+		logger.Error(fmt.Sprintf("failed to get avatar data: %v", err))
 		return nil, fmt.Errorf("failed to get avatar data: %w", err)
 	}
 
 	err = s.s3Client.DeleteAvatar(ctx, avatarInfo.Link)
 	if err != nil {
+		logger.Error(fmt.Sprintf("failed to delete avatar in s3: %v", err))
 		return nil, fmt.Errorf("failed to delete avatar in s3: %w", err)
 	}
 
 	err = s.repository.DeleteSocietyAvatar(avatarInfo.ID)
 	if err != nil {
+		logger.Error(fmt.Sprintf("failed to delete avatar in postgres: %v", err))
 		return nil, fmt.Errorf("failed to delete avatar in postgres: %w", err)
 	}
 
@@ -246,6 +277,7 @@ func (s *Service) DeleteSocietyAvatar(ctx context.Context, in *avatarproto.Delet
 
 	err = s.produceNewSocietyAvatar(avatarInfo.UUID, latestAvatar)
 	if err != nil {
+		logger.Error(fmt.Sprintf("failed to produce avatar: %v", err))
 		return nil, fmt.Errorf("failed to produce avatar: %w", err)
 	}
 
