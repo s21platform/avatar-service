@@ -41,29 +41,29 @@ func New(s3Client S3Storage, repo DBRepo, userKafkaProducer NewAvatarRegisterSrv
 }
 
 func (s *Service) SetUserAvatar(stream avatarproto.AvatarService_SetUserAvatarServer) error {
-	//logger := logger_lib.FromContext(stream.Context(), config.KeyLogger)
-	//logger.AddFuncName("SetUserAvatar")
+	logger := logger_lib.FromContext(stream.Context(), config.KeyLogger)
+	logger.AddFuncName("SetUserAvatar")
 
 	UUID, filename, imageData, err := s.receiveUserData(stream)
 	if err != nil {
-		//logger.Error(fmt.Sprintf("%v", err))
+		logger.Error(fmt.Sprintf("%v", err))
 		return err
 	}
 
 	link, err := s.uploadToS3(UUID, filename, imageData, TypeUser)
 	if err != nil {
-		//logger.Error(fmt.Sprintf("%v", err))
+		logger.Error(fmt.Sprintf("%v", err))
 		return err
 	}
 
 	if err = s.repository.SetUserAvatar(UUID, link); err != nil {
-		//logger.Error(fmt.Sprintf("failed to save avatar to database: %v", err))
+		logger.Error(fmt.Sprintf("failed to save avatar to database: %v", err))
 		return fmt.Errorf("failed to save avatar to database: %w", err)
 	}
 
 	err = s.produceNewUserAvatar(UUID, link)
 	if err != nil {
-		//logger.Error(fmt.Sprintf("%v", err))
+		logger.Error(fmt.Sprintf("%v", err))
 		return err
 	}
 
@@ -164,29 +164,29 @@ func (s *Service) DeleteUserAvatar(ctx context.Context, in *avatarproto.DeleteUs
 }
 
 func (s *Service) SetSocietyAvatar(stream avatarproto.AvatarService_SetSocietyAvatarServer) error {
-	//logger := logger_lib.FromContext(stream.Context(), config.KeyLogger)
-	//logger.AddFuncName("SetSocietyAvatar")
+	logger := logger_lib.FromContext(stream.Context(), config.KeyLogger)
+	logger.AddFuncName("SetSocietyAvatar")
 
 	UUID, filename, imageData, err := s.receiveSocietyData(stream)
 	if err != nil {
-		//logger.Error(fmt.Sprintf("%v", err))
+		logger.Error(fmt.Sprintf("%v", err))
 		return err
 	}
 
 	link, err := s.uploadToS3(UUID, filename, imageData, TypeSociety)
 	if err != nil {
-		//logger.Error(fmt.Sprintf("%v", err))
+		logger.Error(fmt.Sprintf("%v", err))
 		return err
 	}
 
 	if err = s.repository.SetSocietyAvatar(UUID, link); err != nil {
-		//logger.Error(fmt.Sprintf("failed to save avatar to database: %v", err))
+		logger.Error(fmt.Sprintf("failed to save avatar to database: %v", err))
 		return fmt.Errorf("failed to save avatar to database: %w", err)
 	}
 
 	err = s.produceNewSocietyAvatar(UUID, link)
 	if err != nil {
-		//logger.Error(fmt.Sprintf("%v", err))
+		logger.Error(fmt.Sprintf("%v", err))
 		return err
 	}
 
