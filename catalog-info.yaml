@@ -1,0 +1,23 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: avatar
+  description: Сервис аватарок пользователей
+  annotations:
+    github.com/project-slug: s21platform/avatar-service
+  tags:
+    - grpc
+    - kafka
+    - postgres
+    - s3
+    - webp
+  links:
+    - url: https://metric.x.space-21.ru/d/ce3mgzcz0b668a/avatar-service?orgId=1
+      title: Grafana
+      icon: dashboard
+spec:
+  type: service
+  lifecycle: production
+  owner: avatar-service-team
+  providesApis:
+    - avatar-api
