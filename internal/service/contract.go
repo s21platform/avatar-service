@@ -1,8 +1,9 @@
 package service
 
 import (
-	"avatar_service/internal/model"
 	"context"
+
+	"github.com/s21platform/avatar-service/internal/model"
 )
 
 type DBRepo interface {

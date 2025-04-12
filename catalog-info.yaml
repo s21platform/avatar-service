@@ -26,3 +26,176 @@ spec:
     - SetSocietyAvatar-v0
     - GetAllSocietyAvatars-v0
     - DeleteSocietyAvatar-v0
+
+---
+
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: SetUserAvatar-v0
+  description: Установка нового аватара пользователя
+  annotations:
+    github.com/project-slug: s21platform/avatar-service
+  #    backstage.io/techdocs-ref: dir:.  # Если планируете использовать TechDocs
+  tags:
+    - proto
+spec:
+  type: grpc
+  lifecycle: production
+  owner: avatar-service-team
+  definition: |
+    rpc SetUserAvatar(stream SetUserAvatarIn) returns (SetUserAvatarOut){};
+    
+    message SetUserAvatarIn {
+      string uuid = 1;
+      string filename = 2;
+      bytes batch = 3;
+    }
+    
+    message SetUserAvatarOut {
+      string link = 1;
+    }
+
+---
+
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: GetAllUserAvatars-v0
+  description: Получение всех аватаров пользователя
+  annotations:
+    github.com/project-slug: s21platform/avatar-service
+  #    backstage.io/techdocs-ref: dir:.  # Если планируете использовать TechDocs
+  tags:
+    - proto
+spec:
+  type: grpc
+  lifecycle: production
+  owner: avatar-service-team
+  definition: |
+    rpc GetAllUserAvatars(GetAllUserAvatarsIn) returns (GetAllUserAvatarsOut){};
+    
+    message GetAllUserAvatarsIn {
+      string uuid = 1;
+    }
+    
+    message Avatar {
+      int32 id = 1;
+      string link = 2;
+    }
+    
+    message GetAllUserAvatarsOut {
+      repeated Avatar avatar_list = 1;
+    }
+
+---
+
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: DeleteUserAvatar-v0
+  description: Удаление аватара пользователя
+  annotations:
+    github.com/project-slug: s21platform/avatar-service
+  #    backstage.io/techdocs-ref: dir:.  # Если планируете использовать TechDocs
+  tags:
+    - proto
+spec:
+  type: grpc
+  lifecycle: production
+  owner: avatar-service-team
+  definition: |
+    rpc DeleteUserAvatar(DeleteUserAvatarIn) returns (Avatar){};
+    
+    message DeleteUserAvatarIn {
+      int32 avatar_id = 1;
+    }
+    
+    message Avatar {
+      int32 id = 1;
+      string link = 2;
+    }
+
+---
+
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: SetSocietyAvatar-v0
+  description: Установка нового аватара сообщества
+  annotations:
+    github.com/project-slug: s21platform/avatar-service
+  #    backstage.io/techdocs-ref: dir:.  # Если планируете использовать TechDocs
+  tags:
+    - proto
+spec:
+  type: grpc
+  lifecycle: production
+  owner: avatar-service-team
+  definition: |
+    rpc SetSocietyAvatar(stream SetSocietyAvatarIn) returns (SetSocietyAvatarOut){};
+    
+    message SetSocietyAvatarIn {
+      string uuid = 1;
+      string filename = 2;
+      bytes batch = 3;
+    }
+    
+    message SetSocietyAvatarOut {
+      string link = 1;
+    }
+
+---
+
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: GetAllSocietyAvatars-v0
+  description: Получение всех аватаров сообщества
+  annotations:
+    github.com/project-slug: s21platform/avatar-service
+  #    backstage.io/techdocs-ref: dir:.  # Если планируете использовать TechDocs
+  tags:
+    - proto
+spec:
+  type: grpc
+  lifecycle: production
+  owner: avatar-service-team
+  definition: |
+    rpc GetAllSocietyAvatars(GetAllSocietyAvatarsIn) returns (GetAllSocietyAvatarsOut){};
+    
+    message GetAllSocietyAvatarsIn {
+      string uuid = 1;
+    }
+    
+    message GetAllSocietyAvatarsOut {
+      repeated Avatar avatar_list = 1;
+    }
+
+---
+
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: DeleteSocietyAvatar-v0
+  description: Удаление аватара сообщества
+  annotations:
+    github.com/project-slug: s21platform/avatar-service
+  #    backstage.io/techdocs-ref: dir:.  # Если планируете использовать TechDocs
+  tags:
+    - proto
+spec:
+  type: grpc
+  lifecycle: production
+  owner: avatar-service-team
+  definition: |
+    rpc DeleteSocietyAvatar(DeleteSocietyAvatarIn) returns (Avatar){};
+    
+    message DeleteSocietyAvatarIn {
+      int32 avatar_id = 1;
+    }
+    
+    message Avatar {
+      int32 id = 1;
+      string link = 2;
+    }

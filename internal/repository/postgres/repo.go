@@ -1,13 +1,14 @@
 package postgres
 
 import (
-	"avatar_service/internal/config"
-	"avatar_service/internal/model"
 	"fmt"
 	"log"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Импорт драйвера PostgreSQL
+
+	"github.com/s21platform/avatar-service/internal/config"
+	"github.com/s21platform/avatar-service/internal/model"
 )
 
 type Repository struct {

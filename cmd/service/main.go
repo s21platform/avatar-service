@@ -1,20 +1,22 @@
 package main
 
 import (
-	"avatar_service/internal/config"
-	"avatar_service/internal/infra"
-	"avatar_service/internal/repository/postgres"
-	"avatar_service/internal/repository/s3"
-	"avatar_service/internal/service"
 	"fmt"
 	"log"
 	"net"
 
-	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
+	"google.golang.org/grpc"
+
 	kafkalib "github.com/s21platform/kafka-lib"
 	logger_lib "github.com/s21platform/logger-lib"
 	"github.com/s21platform/metrics-lib/pkg"
-	"google.golang.org/grpc"
+
+	"github.com/s21platform/avatar-service/internal/config"
+	"github.com/s21platform/avatar-service/internal/infra"
+	"github.com/s21platform/avatar-service/internal/repository/postgres"
+	"github.com/s21platform/avatar-service/internal/repository/s3"
+	"github.com/s21platform/avatar-service/internal/service"
+	"github.com/s21platform/avatar-service/pkg/avatar"
 )
 
 func main() {
@@ -48,7 +50,7 @@ func main() {
 		),
 	)
 
-	avatarproto.RegisterAvatarServiceServer(grpcServer, avatarService)
+	avatar.RegisterAvatarServiceServer(grpcServer, avatarService)
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Service.Port))
 	if err != nil {

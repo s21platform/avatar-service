@@ -1,7 +1,6 @@
 package service
 
 import (
-	"avatar_service/internal/config"
 	"context"
 	"fmt"
 	"io"
@@ -9,9 +8,11 @@ import (
 	"strings"
 	"time"
 
-	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
 	logger_lib "github.com/s21platform/logger-lib"
 	"github.com/s21platform/user-proto/user-proto/new_avatar_register"
+
+	"github.com/s21platform/avatar-service/internal/config"
+	"github.com/s21platform/avatar-service/pkg/avatar"
 )
 
 type AvatarType string
@@ -22,7 +23,7 @@ const (
 )
 
 type Service struct {
-	avatarproto.UnimplementedAvatarServiceServer
+	avatar.UnimplementedAvatarServiceServer
 	s3Client             S3Storage
 	repository           DBRepo
 	userKafkaProducer    NewAvatarRegisterSrv
@@ -40,7 +41,7 @@ func New(s3Client S3Storage, repo DBRepo, userKafkaProducer NewAvatarRegisterSrv
 	}
 }
 
-func (s *Service) SetUserAvatar(stream avatarproto.AvatarService_SetUserAvatarServer) error {
+func (s *Service) SetUserAvatar(stream avatar.AvatarService_SetUserAvatarServer) error {
 	logger := logger_lib.FromContext(stream.Context(), config.KeyLogger)
 	logger.AddFuncName("SetUserAvatar")
 
@@ -67,12 +68,12 @@ func (s *Service) SetUserAvatar(stream avatarproto.AvatarService_SetUserAvatarSe
 		return err
 	}
 
-	return stream.SendAndClose(&avatarproto.SetUserAvatarOut{
+	return stream.SendAndClose(&avatar.SetUserAvatarOut{
 		Link: link,
 	})
 }
 
-func (s *Service) receiveUserData(stream avatarproto.AvatarService_SetUserAvatarServer) (string, string, []byte, error) {
+func (s *Service) receiveUserData(stream avatar.AvatarService_SetUserAvatarServer) (string, string, []byte, error) {
 	var (
 		UUID      string
 		filename  string
@@ -112,7 +113,7 @@ func (s *Service) produceNewUserAvatar(UUID, link string) error {
 	return nil
 }
 
-func (s *Service) GetAllUserAvatars(ctx context.Context, in *avatarproto.GetAllUserAvatarsIn) (*avatarproto.GetAllUserAvatarsOut, error) {
+func (s *Service) GetAllUserAvatars(ctx context.Context, in *avatar.GetAllUserAvatarsIn) (*avatar.GetAllUserAvatarsOut, error) {
 	logger := logger_lib.FromContext(ctx, config.KeyLogger)
 	logger.AddFuncName("GetAllUserAvatars")
 
@@ -122,12 +123,12 @@ func (s *Service) GetAllUserAvatars(ctx context.Context, in *avatarproto.GetAllU
 		return nil, fmt.Errorf("failed to get all user avatars: %w", err)
 	}
 
-	return &avatarproto.GetAllUserAvatarsOut{
+	return &avatar.GetAllUserAvatarsOut{
 		AvatarList: avatars.FromDTO(),
 	}, nil
 }
 
-func (s *Service) DeleteUserAvatar(ctx context.Context, in *avatarproto.DeleteUserAvatarIn) (*avatarproto.Avatar, error) {
+func (s *Service) DeleteUserAvatar(ctx context.Context, in *avatar.DeleteUserAvatarIn) (*avatar.Avatar, error) {
 	logger := logger_lib.FromContext(ctx, config.KeyLogger)
 	logger.AddFuncName("DeleteUserAvatar")
 
@@ -157,13 +158,13 @@ func (s *Service) DeleteUserAvatar(ctx context.Context, in *avatarproto.DeleteUs
 		return nil, fmt.Errorf("failed to produce avatar: %w", err)
 	}
 
-	return &avatarproto.Avatar{
+	return &avatar.Avatar{
 		Id:   int32(avatarInfo.ID),
 		Link: avatarInfo.Link,
 	}, err
 }
 
-func (s *Service) SetSocietyAvatar(stream avatarproto.AvatarService_SetSocietyAvatarServer) error {
+func (s *Service) SetSocietyAvatar(stream avatar.AvatarService_SetSocietyAvatarServer) error {
 	logger := logger_lib.FromContext(stream.Context(), config.KeyLogger)
 	logger.AddFuncName("SetSocietyAvatar")
 
@@ -190,12 +191,12 @@ func (s *Service) SetSocietyAvatar(stream avatarproto.AvatarService_SetSocietyAv
 		return err
 	}
 
-	return stream.SendAndClose(&avatarproto.SetSocietyAvatarOut{
+	return stream.SendAndClose(&avatar.SetSocietyAvatarOut{
 		Link: link,
 	})
 }
 
-func (s *Service) receiveSocietyData(stream avatarproto.AvatarService_SetSocietyAvatarServer) (string, string, []byte, error) {
+func (s *Service) receiveSocietyData(stream avatar.AvatarService_SetSocietyAvatarServer) (string, string, []byte, error) {
 	var (
 		UUID      string
 		filename  string
@@ -236,7 +237,7 @@ func (s *Service) produceNewSocietyAvatar(UUID, link string) error {
 	return nil
 }
 
-func (s *Service) GetAllSocietyAvatars(ctx context.Context, in *avatarproto.GetAllSocietyAvatarsIn) (*avatarproto.GetAllSocietyAvatarsOut, error) {
+func (s *Service) GetAllSocietyAvatars(ctx context.Context, in *avatar.GetAllSocietyAvatarsIn) (*avatar.GetAllSocietyAvatarsOut, error) {
 	logger := logger_lib.FromContext(ctx, config.KeyLogger)
 	logger.AddFuncName("GetAllSocietyAvatars")
 
@@ -246,12 +247,12 @@ func (s *Service) GetAllSocietyAvatars(ctx context.Context, in *avatarproto.GetA
 		return nil, fmt.Errorf("failed to get all society avatars: %w", err)
 	}
 
-	return &avatarproto.GetAllSocietyAvatarsOut{
+	return &avatar.GetAllSocietyAvatarsOut{
 		AvatarList: avatars.FromDTO(),
 	}, nil
 }
 
-func (s *Service) DeleteSocietyAvatar(ctx context.Context, in *avatarproto.DeleteSocietyAvatarIn) (*avatarproto.Avatar, error) {
+func (s *Service) DeleteSocietyAvatar(ctx context.Context, in *avatar.DeleteSocietyAvatarIn) (*avatar.Avatar, error) {
 	logger := logger_lib.FromContext(ctx, config.KeyLogger)
 	logger.AddFuncName("DeleteSocietyAvatar")
 
@@ -281,7 +282,7 @@ func (s *Service) DeleteSocietyAvatar(ctx context.Context, in *avatarproto.Delet
 		return nil, fmt.Errorf("failed to produce avatar: %w", err)
 	}
 
-	return &avatarproto.Avatar{
+	return &avatar.Avatar{
 		Id:   int32(avatarInfo.ID),
 		Link: avatarInfo.Link,
 	}, err

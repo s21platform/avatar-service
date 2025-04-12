@@ -1,7 +1,6 @@
 package s3
 
 import (
-	"avatar_service/internal/config"
 	"bytes"
 	"context"
 	"fmt"
@@ -16,6 +15,8 @@ import (
 	"github.com/kolesa-team/go-webp/webp"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+
+	"github.com/s21platform/avatar-service/internal/config"
 )
 
 type Client struct {

@@ -12,12 +12,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22
+          go-version: 1.24
 
       - name: Install WebP library (libwebp-dev)
         run: sudo apt-get update && sudo apt-get install -y libwebp-dev
@@ -35,12 +35,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22
+          go-version: 1.24
 
       - name: Run tests
         run: go test -coverprofile=coverage.out -tags=test -v ./...
@@ -66,7 +66,7 @@ jobs:
     needs: test
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Yandex CR Login
         uses: yc-actions/yc-cr-login@v0.1-alpha
         with:
@@ -87,5 +87,7 @@ jobs:
           key: ${{ secrets.PRIVATE_SSH_KEY_DEVELOP }}
           passphrase: ${{ secrets.PASSPHRASE_DEVELOP }}
           script: |
+            set -e
             docker pull ${{ secrets.CR_REGISTRY }}/${{ secrets.CR_NAME }}:develop
             docker-compose -f ~/space21/staging/staging-deployment/docker-compose.yml --env-file ~/space21/staging/.env up -d ${{ secrets.CR_NAME }}
+            echo "${{ secrets.SERVICE_NAME }}.stage.deploy:1|c" | nc -u ${{ secrets.HOST_DEVELOP }} ${{ secrets.STATSD_PORT }}

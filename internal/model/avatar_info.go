@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	avatarproto "github.com/s21platform/avatar-proto/avatar-proto"
+	avatarproto "github.com/s21platform/avatar-service/pkg/avatar"
 )
 
 type AvatarInfoList []AvatarInfo

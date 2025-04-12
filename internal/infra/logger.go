@@ -1,12 +1,14 @@
 package infra
 
 import (
-	"avatar_service/internal/config"
-	"avatar_service/internal/model"
 	"context"
 
-	logger_lib "github.com/s21platform/logger-lib"
 	"google.golang.org/grpc"
+
+	logger_lib "github.com/s21platform/logger-lib"
+
+	"github.com/s21platform/avatar-service/internal/config"
+	"github.com/s21platform/avatar-service/internal/model"
 )
 
 func Logger(logger *logger_lib.Logger) func(context.Context, interface{}, *grpc.UnaryServerInfo, grpc.UnaryHandler) (interface{}, error) {
