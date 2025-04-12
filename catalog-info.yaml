@@ -20,4 +20,9 @@ spec:
   lifecycle: production
   owner: avatar-service-team
   providesApis:
-    - avatar-api
+    - SetUserAvatar-v0
+    - GetAllUserAvatars-v0
+    - DeleteUserAvatar-v0
+    - SetSocietyAvatar-v0
+    - GetAllSocietyAvatars-v0
+    - DeleteSocietyAvatar-v0
