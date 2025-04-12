@@ -2,70 +2,90 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
-	"path/filepath"
-	"strings"
-	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	logger_lib "github.com/s21platform/logger-lib"
-	"github.com/s21platform/user-proto/user-proto/new_avatar_register"
 
 	"github.com/s21platform/avatar-service/internal/config"
+	"github.com/s21platform/avatar-service/internal/model"
 	"github.com/s21platform/avatar-service/pkg/avatar"
-)
-
-type AvatarType string
-
-const (
-	TypeUser    AvatarType = "user"
-	TypeSociety AvatarType = "society"
+	"github.com/s21platform/avatar-service/pkg/new_avatar_register"
 )
 
 type Service struct {
 	avatar.UnimplementedAvatarServiceServer
 	s3Client             S3Storage
 	repository           DBRepo
-	userKafkaProducer    NewAvatarRegisterSrv
-	societyKafkaProducer NewAvatarRegisterSrv
-	bucketName           string
+	userKafkaProducer    KafkaProducer
+	societyKafkaProducer KafkaProducer
 }
 
-func New(s3Client S3Storage, repo DBRepo, userKafkaProducer NewAvatarRegisterSrv, societyKafkaProducer NewAvatarRegisterSrv, bucketName string) *Service {
+func New(s3Client S3Storage, repo DBRepo, userKafkaProducer KafkaProducer, societyKafkaProducer KafkaProducer) *Service {
 	return &Service{
 		s3Client:             s3Client,
 		repository:           repo,
 		userKafkaProducer:    userKafkaProducer,
 		societyKafkaProducer: societyKafkaProducer,
-		bucketName:           bucketName,
 	}
 }
 
 func (s *Service) SetUserAvatar(stream avatar.AvatarService_SetUserAvatarServer) error {
-	logger := logger_lib.FromContext(stream.Context(), config.KeyLogger)
+	ctx := stream.Context()
+	logger := logger_lib.FromContext(ctx, config.KeyLogger)
 	logger.AddFuncName("SetUserAvatar")
 
-	UUID, filename, imageData, err := s.receiveUserData(stream)
-	if err != nil {
-		logger.Error(fmt.Sprintf("%v", err))
-		return err
+	uuid, ok := ctx.Value(config.KeyUUID).(string)
+	if !ok {
+		logger.Error("uuid is required")
+		return status.Error(codes.InvalidArgument, "uuid is required")
 	}
 
-	link, err := s.uploadToS3(UUID, filename, imageData, TypeUser)
-	if err != nil {
-		logger.Error(fmt.Sprintf("%v", err))
-		return err
+	avatarContent := &model.AvatarContent{
+		AvatarType: model.UserAvatarType,
+		UUID:       uuid,
 	}
 
-	if err = s.repository.SetUserAvatar(UUID, link); err != nil {
+	for {
+		in, err := stream.Recv()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			logger.Error(fmt.Sprintf("failed to receive data from stream: %v", err))
+			return status.Errorf(codes.Internal, "failed to receive data from stream: %v", err)
+		}
+
+		if avatarContent.Filename == "" {
+			avatarContent.Filename = in.Filename
+		}
+
+		avatarContent.ImageData = append(avatarContent.ImageData, in.Batch...)
+	}
+
+	link, err := s.s3Client.PutObject(ctx, avatarContent)
+	if err != nil {
+		logger.Error(fmt.Sprintf("failed to upload file to S3: %v", err))
+		return status.Errorf(codes.Internal, "failed to upload file to S3: %v", err)
+	}
+
+	if err = s.repository.SetUserAvatar(ctx, uuid, link); err != nil {
 		logger.Error(fmt.Sprintf("failed to save avatar to database: %v", err))
-		return fmt.Errorf("failed to save avatar to database: %w", err)
+		return status.Errorf(codes.Internal, "failed to save avatar to database: %v", err)
 	}
 
-	err = s.produceNewUserAvatar(UUID, link)
-	if err != nil {
-		logger.Error(fmt.Sprintf("%v", err))
-		return err
+	msg := &new_avatar_register.NewAvatarRegister{
+		Uuid: uuid,
+		Link: link,
+	}
+	if err = s.userKafkaProducer.ProduceMessage(ctx, msg, uuid); err != nil {
+		logger.Error(fmt.Sprintf("failed to produce message to user service: %v", err))
+		return status.Errorf(codes.Internal, "failed to produce message to user service: %v", err)
 	}
 
 	return stream.SendAndClose(&avatar.SetUserAvatarOut{
@@ -73,54 +93,20 @@ func (s *Service) SetUserAvatar(stream avatar.AvatarService_SetUserAvatarServer)
 	})
 }
 
-func (s *Service) receiveUserData(stream avatar.AvatarService_SetUserAvatarServer) (string, string, []byte, error) {
-	var (
-		UUID      string
-		filename  string
-		imageData []byte
-	)
-
-	for {
-		in, err := stream.Recv()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return "", "", nil, fmt.Errorf("failed to receive data from stream: %w", err)
-		}
-
-		if UUID == "" && filename == "" {
-			UUID = in.Uuid
-			filename = in.Filename
-		}
-
-		imageData = append(imageData, in.Batch...)
-	}
-
-	return UUID, filename, imageData, nil
-}
-
-func (s *Service) produceNewUserAvatar(UUID, link string) error {
-	msg := &new_avatar_register.NewAvatarRegister{
-		Uuid: UUID,
-		Link: link,
-	}
-
-	err := s.userKafkaProducer.ProduceMessage(msg)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Service) GetAllUserAvatars(ctx context.Context, in *avatar.GetAllUserAvatarsIn) (*avatar.GetAllUserAvatarsOut, error) {
+func (s *Service) GetAllUserAvatars(ctx context.Context, _ *emptypb.Empty) (*avatar.GetAllUserAvatarsOut, error) {
 	logger := logger_lib.FromContext(ctx, config.KeyLogger)
 	logger.AddFuncName("GetAllUserAvatars")
 
-	avatars, err := s.repository.GetAllUserAvatars(in.Uuid)
+	uuid, ok := ctx.Value(config.KeyUUID).(string)
+	if !ok {
+		logger.Error("uuid is required")
+		return nil, status.Error(codes.InvalidArgument, "uuid is required")
+	}
+
+	avatars, err := s.repository.GetAllUserAvatars(ctx, uuid)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to get all user avatars: %v", err))
-		return nil, fmt.Errorf("failed to get all user avatars: %w", err)
+		return nil, status.Errorf(codes.Internal, "failed to get all user avatars: %v", err)
 	}
 
 	return &avatar.GetAllUserAvatarsOut{
@@ -132,63 +118,91 @@ func (s *Service) DeleteUserAvatar(ctx context.Context, in *avatar.DeleteUserAva
 	logger := logger_lib.FromContext(ctx, config.KeyLogger)
 	logger.AddFuncName("DeleteUserAvatar")
 
-	avatarInfo, err := s.repository.GetUserAvatarData(int(in.AvatarId))
+	avatarInfo, err := s.repository.GetUserAvatarData(ctx, int(in.AvatarId))
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to get user avatar: %v", err))
-		return nil, fmt.Errorf("failed to get avatar data: %w", err)
+		return nil, status.Errorf(codes.NotFound, "failed to get avatar data: %v", err)
 	}
 
-	err = s.s3Client.DeleteAvatar(ctx, avatarInfo.Link)
+	err = s.s3Client.RemoveObject(ctx, avatarInfo.Link)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to delete user avatar: %v", err))
-		return nil, fmt.Errorf("failed to delete avatar in s3: %w", err)
+		return nil, status.Errorf(codes.Internal, "failed to delete avatar in s3: %v", err)
 	}
 
-	err = s.repository.DeleteUserAvatar(avatarInfo.ID)
+	err = s.repository.DeleteUserAvatar(ctx, avatarInfo.ID)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to delete user avatar: %v", err))
-		return nil, fmt.Errorf("failed to delete avatar in postgres: %w", err)
+		return nil, status.Errorf(codes.Internal, "failed to delete avatar in postgres: %v", err)
 	}
 
-	latestAvatar := s.repository.GetLatestUserAvatar(avatarInfo.UUID)
+	latestAvatar := s.repository.GetLatestUserAvatar(ctx, avatarInfo.UUID)
 
-	err = s.produceNewUserAvatar(avatarInfo.UUID, latestAvatar)
+	msg := &new_avatar_register.NewAvatarRegister{
+		Uuid: avatarInfo.UUID,
+		Link: latestAvatar,
+	}
+	err = s.userKafkaProducer.ProduceMessage(ctx, msg, avatarInfo.UUID)
 	if err != nil {
-		logger.Error(fmt.Sprintf("failed to delete user avatar: %v", err))
-		return nil, fmt.Errorf("failed to produce avatar: %w", err)
+		logger.Error(fmt.Sprintf("failed to produce avatar to user service: %v", err))
+		return nil, status.Errorf(codes.Internal, "failed to produce avatar to user service: %v", err)
 	}
 
 	return &avatar.Avatar{
 		Id:   int32(avatarInfo.ID),
 		Link: avatarInfo.Link,
-	}, err
+	}, nil
 }
 
 func (s *Service) SetSocietyAvatar(stream avatar.AvatarService_SetSocietyAvatarServer) error {
-	logger := logger_lib.FromContext(stream.Context(), config.KeyLogger)
+	ctx := stream.Context()
+	logger := logger_lib.FromContext(ctx, config.KeyLogger)
 	logger.AddFuncName("SetSocietyAvatar")
 
-	UUID, filename, imageData, err := s.receiveSocietyData(stream)
-	if err != nil {
-		logger.Error(fmt.Sprintf("%v", err))
-		return err
+	avatarContent := &model.AvatarContent{AvatarType: model.SocietyAvatarType}
+
+	for {
+		in, err := stream.Recv()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			logger.Error(fmt.Sprintf("failed to receive data from stream: %v", err))
+			return status.Errorf(codes.Internal, "failed to receive data from stream: %v", err)
+		}
+
+		if avatarContent.UUID == "" || avatarContent.Filename == "" {
+			avatarContent.UUID = in.Uuid
+			avatarContent.Filename = in.Filename
+		}
+
+		avatarContent.ImageData = append(avatarContent.ImageData, in.Batch...)
 	}
 
-	link, err := s.uploadToS3(UUID, filename, imageData, TypeSociety)
-	if err != nil {
-		logger.Error(fmt.Sprintf("%v", err))
-		return err
+	if avatarContent.UUID == "" {
+		logger.Error("society uuid is required")
+		return status.Error(codes.InvalidArgument, "society uuid is required")
 	}
 
-	if err = s.repository.SetSocietyAvatar(UUID, link); err != nil {
+	link, err := s.s3Client.PutObject(ctx, avatarContent)
+	if err != nil {
+		logger.Error(fmt.Sprintf("failed to upload file to S3: %v", err))
+		return status.Errorf(codes.Internal, "failed to upload file to S3: %v", err)
+	}
+
+	if err = s.repository.SetSocietyAvatar(ctx, avatarContent.UUID, link); err != nil {
 		logger.Error(fmt.Sprintf("failed to save avatar to database: %v", err))
-		return fmt.Errorf("failed to save avatar to database: %w", err)
+		return status.Errorf(codes.Internal, "failed to save avatar to database: %v", err)
 	}
 
-	err = s.produceNewSocietyAvatar(UUID, link)
+	msg := &new_avatar_register.NewAvatarRegister{
+		Uuid: avatarContent.UUID,
+		Link: link,
+	}
+	err = s.societyKafkaProducer.ProduceMessage(ctx, msg, avatarContent.UUID)
 	if err != nil {
-		logger.Error(fmt.Sprintf("%v", err))
-		return err
+		logger.Error(fmt.Sprintf("failed to produce message to society service: %v", err))
+		return status.Errorf(codes.Internal, "failed to produce message to society service: %v", err)
 	}
 
 	return stream.SendAndClose(&avatar.SetSocietyAvatarOut{
@@ -196,55 +210,19 @@ func (s *Service) SetSocietyAvatar(stream avatar.AvatarService_SetSocietyAvatarS
 	})
 }
 
-func (s *Service) receiveSocietyData(stream avatar.AvatarService_SetSocietyAvatarServer) (string, string, []byte, error) {
-	var (
-		UUID      string
-		filename  string
-		imageData []byte
-	)
-
-	for {
-		in, err := stream.Recv()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return "", "", nil, fmt.Errorf("failed to receive data from stream: %w", err)
-		}
-
-		if UUID == "" && filename == "" {
-			UUID = in.Uuid
-			filename = in.Filename
-		}
-
-		imageData = append(imageData, in.Batch...)
-	}
-
-	return UUID, filename, imageData, nil
-}
-
-func (s *Service) produceNewSocietyAvatar(UUID, link string) error {
-	// todo подтянуть контракт из society-proto
-	//msg := &new_avatar_register.NewAvatarRegister{
-	//	Uuid: UUID,
-	//	Link: link,
-	//}
-
-	//err := s.societyKafkaProducer.ProduceMessage(msg)
-	//if err != nil {
-	//	return err
-	//}
-
-	return nil
-}
-
 func (s *Service) GetAllSocietyAvatars(ctx context.Context, in *avatar.GetAllSocietyAvatarsIn) (*avatar.GetAllSocietyAvatarsOut, error) {
 	logger := logger_lib.FromContext(ctx, config.KeyLogger)
 	logger.AddFuncName("GetAllSocietyAvatars")
 
-	avatars, err := s.repository.GetAllSocietyAvatars(in.Uuid)
+	if in.Uuid == "" {
+		logger.Error("society uuid is required")
+		return nil, status.Error(codes.InvalidArgument, "society uuid is required")
+	}
+
+	avatars, err := s.repository.GetAllSocietyAvatars(ctx, in.Uuid)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to get all society avatars: %v", err))
-		return nil, fmt.Errorf("failed to get all society avatars: %w", err)
+		return nil, status.Errorf(codes.Internal, "failed to get all society avatars: %v", err)
 	}
 
 	return &avatar.GetAllSocietyAvatarsOut{
@@ -256,57 +234,38 @@ func (s *Service) DeleteSocietyAvatar(ctx context.Context, in *avatar.DeleteSoci
 	logger := logger_lib.FromContext(ctx, config.KeyLogger)
 	logger.AddFuncName("DeleteSocietyAvatar")
 
-	avatarInfo, err := s.repository.GetSocietyAvatarData(int(in.AvatarId))
+	avatarInfo, err := s.repository.GetSocietyAvatarData(ctx, int(in.AvatarId))
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to get avatar data: %v", err))
-		return nil, fmt.Errorf("failed to get avatar data: %w", err)
+		return nil, status.Errorf(codes.NotFound, "failed to get avatar data: %v", err)
 	}
 
-	err = s.s3Client.DeleteAvatar(ctx, avatarInfo.Link)
+	err = s.s3Client.RemoveObject(ctx, avatarInfo.Link)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to delete avatar in s3: %v", err))
-		return nil, fmt.Errorf("failed to delete avatar in s3: %w", err)
+		return nil, status.Errorf(codes.Internal, "failed to delete avatar in s3: %v", err)
 	}
 
-	err = s.repository.DeleteSocietyAvatar(avatarInfo.ID)
+	err = s.repository.DeleteSocietyAvatar(ctx, avatarInfo.ID)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to delete avatar in postgres: %v", err))
-		return nil, fmt.Errorf("failed to delete avatar in postgres: %w", err)
+		return nil, status.Errorf(codes.Internal, "failed to delete avatar in postgres: %v", err)
 	}
 
-	latestAvatar := s.repository.GetLatestSocietyAvatar(avatarInfo.UUID)
+	latestAvatar := s.repository.GetLatestSocietyAvatar(ctx, avatarInfo.UUID)
 
-	err = s.produceNewSocietyAvatar(avatarInfo.UUID, latestAvatar)
+	msg := &new_avatar_register.NewAvatarRegister{
+		Uuid: avatarInfo.UUID,
+		Link: latestAvatar,
+	}
+	err = s.societyKafkaProducer.ProduceMessage(ctx, msg, avatarInfo.UUID)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to produce avatar: %v", err))
-		return nil, fmt.Errorf("failed to produce avatar: %w", err)
+		return nil, status.Errorf(codes.Internal, "failed to produce avatar: %v", err)
 	}
 
 	return &avatar.Avatar{
 		Id:   int32(avatarInfo.ID),
 		Link: avatarInfo.Link,
-	}, err
-}
-
-func (s *Service) uploadToS3(UUID, filename string, imageData []byte, avatarType AvatarType) (string, error) {
-	objectName := fmt.Sprintf("%s/%s/%s", avatarType, UUID, generateTimestampedFileName(filename))
-	contentType := "image/webp"
-
-	link, err := s.s3Client.UploadFile(context.Background(), s.bucketName, objectName, imageData, contentType)
-	if err != nil {
-		return "", fmt.Errorf("failed to upload file to S3: %w", err)
-	}
-
-	return link, nil
-}
-
-func generateTimestampedFileName(filename string) string {
-	timestamp := time.Now().Format("20060102_150405")
-
-	extension := filepath.Ext(filename)
-	baseName := strings.TrimSuffix(filename, extension)
-
-	newExtension := ".webp"
-
-	return fmt.Sprintf("%s_%s%s", timestamp, baseName, newExtension)
+	}, nil
 }

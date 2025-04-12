@@ -1,11 +1,12 @@
 # Generated code
-pkg/chat/
+pkg/avatar/
 
 # Main files and workers
 cmd/
 
 
-internal/pkg
+pkg
+
 internal/client
 internal/databus
 internal/infra

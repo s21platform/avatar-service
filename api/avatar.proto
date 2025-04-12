@@ -2,9 +2,11 @@ syntax = "proto3";
 
 option go_package = "pkg/avatar";
 
+import  "google/protobuf/empty.proto";
+
 service AvatarService {
   rpc SetUserAvatar(stream SetUserAvatarIn) returns (SetUserAvatarOut){};
-  rpc GetAllUserAvatars(GetAllUserAvatarsIn) returns (GetAllUserAvatarsOut){};
+  rpc GetAllUserAvatars(google.protobuf.Empty) returns (GetAllUserAvatarsOut){};
   rpc DeleteUserAvatar(DeleteUserAvatarIn) returns (Avatar){};
 
   rpc SetSocietyAvatar(stream SetSocietyAvatarIn) returns (SetSocietyAvatarOut){};
@@ -13,17 +15,12 @@ service AvatarService {
 }
 
 message SetUserAvatarIn {
-  string uuid = 1;
   string filename = 2;
   bytes batch = 3;
 }
 
 message SetUserAvatarOut {
   string link = 1;
-}
-
-message GetAllUserAvatarsIn {
-  string uuid = 1;
 }
 
 message Avatar {

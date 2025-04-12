@@ -9,7 +9,6 @@
     - [DeleteUserAvatarIn](#-DeleteUserAvatarIn)
     - [GetAllSocietyAvatarsIn](#-GetAllSocietyAvatarsIn)
     - [GetAllSocietyAvatarsOut](#-GetAllSocietyAvatarsOut)
-    - [GetAllUserAvatarsIn](#-GetAllUserAvatarsIn)
     - [GetAllUserAvatarsOut](#-GetAllUserAvatarsOut)
     - [SetSocietyAvatarIn](#-SetSocietyAvatarIn)
     - [SetSocietyAvatarOut](#-SetSocietyAvatarOut)
@@ -105,21 +104,6 @@
 
 
 
-<a name="-GetAllUserAvatarsIn"></a>
-
-### GetAllUserAvatarsIn
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| uuid | [string](#string) |  |  |
-
-
-
-
-
-
 <a name="-GetAllUserAvatarsOut"></a>
 
 ### GetAllUserAvatarsOut
@@ -175,7 +159,6 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| uuid | [string](#string) |  |  |
 | filename | [string](#string) |  |  |
 | batch | [bytes](#bytes) |  |  |
 
@@ -213,7 +196,7 @@
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
 | SetUserAvatar | [.SetUserAvatarIn](#SetUserAvatarIn) stream | [.SetUserAvatarOut](#SetUserAvatarOut) |  |
-| GetAllUserAvatars | [.GetAllUserAvatarsIn](#GetAllUserAvatarsIn) | [.GetAllUserAvatarsOut](#GetAllUserAvatarsOut) |  |
+| GetAllUserAvatars | [.google.protobuf.Empty](#google-protobuf-Empty) | [.GetAllUserAvatarsOut](#GetAllUserAvatarsOut) |  |
 | DeleteUserAvatar | [.DeleteUserAvatarIn](#DeleteUserAvatarIn) | [.Avatar](#Avatar) |  |
 | SetSocietyAvatar | [.SetSocietyAvatarIn](#SetSocietyAvatarIn) stream | [.SetSocietyAvatarOut](#SetSocietyAvatarOut) |  |
 | GetAllSocietyAvatars | [.GetAllSocietyAvatarsIn](#GetAllSocietyAvatarsIn) | [.GetAllSocietyAvatarsOut](#GetAllSocietyAvatarsOut) |  |

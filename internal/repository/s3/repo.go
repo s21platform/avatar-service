@@ -9,7 +9,9 @@ import (
 	_ "image/png"  // Регистрация формата png для декодирования изображения в convertToWebP()
 	"log"
 	"net/url"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/kolesa-team/go-webp/encoder"
 	"github.com/kolesa-team/go-webp/webp"
@@ -17,158 +19,103 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
 	"github.com/s21platform/avatar-service/internal/config"
+	"github.com/s21platform/avatar-service/internal/model"
 )
 
 type Client struct {
-	MinioClient *minio.Client
+	minio      *minio.Client
+	bucketName string
 }
 
 func New(cfg *config.Config) *Client {
-	minioClient, err := createMinioClient(cfg)
+	client, err := minio.New(cfg.S3Storage.Endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(cfg.S3Storage.AccessKeyID, cfg.S3Storage.SecretAccessKey, ""),
+		Secure: true,
+	})
 	if err != nil {
 		log.Fatal("failed to create S3 client: ", err)
 	}
 
-	return &Client{MinioClient: minioClient}
+	if cfg.S3Storage.BucketName == "" {
+		log.Fatal("bucket name is required")
+	}
+
+	return &Client{
+		minio:      client,
+		bucketName: cfg.S3Storage.BucketName,
+	}
 }
 
-func createMinioClient(cfg *config.Config) (*minio.Client, error) {
-	endpoint := cfg.S3Storage.Endpoint
-	accessKeyID := cfg.S3Storage.AccessKeyID
-	secretAccessKey := cfg.S3Storage.SecretAccessKey
-
-	minioClient, err := minio.New(endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
-		Secure: true,
-	})
+func (c *Client) PutObject(ctx context.Context, avatar *model.AvatarContent) (string, error) {
+	webpImage, err := convertToWebP(avatar.ImageData)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Minio client: %w", err)
+		return "", fmt.Errorf("failed to convert to webp: %w", err)
 	}
 
-	return minioClient, nil
+	timestamp := time.Now().Format("20060102_150405")
+	fileNameNoExt := strings.TrimSuffix(avatar.Filename, filepath.Ext(avatar.Filename))
+	objectName := fmt.Sprintf("%s/%s/%s_%s.webp", avatar.AvatarType, avatar.UUID, timestamp, fileNameNoExt)
+
+	reader := bytes.NewReader(webpImage)
+	_, err = c.minio.PutObject(
+		ctx,
+		c.bucketName,
+		objectName,
+		reader,
+		int64(len(webpImage)),
+		minio.PutObjectOptions{ContentType: "image/webp"},
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to put object: %w", err)
+	}
+
+	return fmt.Sprintf("https://storage.yandexcloud.net/%s/%s", c.bucketName, objectName), nil
 }
 
-func (c *Client) UploadFile(ctx context.Context, bucketName, objectName string, imageData []byte,
-	contentType string) (string, error) {
-	webpImage, err := convertToWebP(imageData)
+func (c *Client) RemoveObject(ctx context.Context, link string) error {
+	u, err := url.Parse(link)
 	if err != nil {
-		return "", err
+		return fmt.Errorf("failed to parse URL: %w", err)
 	}
 
-	err = c.uploadToS3(ctx, bucketName, objectName, webpImage, contentType)
+	parts := strings.SplitN(strings.TrimPrefix(u.Path, "/"), "/", 2)
+	if len(parts) < 2 {
+		return fmt.Errorf("failed to link missing bucket or object name")
+	}
+	bucketName, objectName := parts[0], parts[1]
+
+	_, err = c.minio.StatObject(ctx, bucketName, objectName, minio.StatObjectOptions{})
 	if err != nil {
-		return "", err
+		return fmt.Errorf("failed to check object existence: %w", err)
 	}
 
-	return c.generateLink(bucketName, objectName), nil
+	err = c.minio.RemoveObject(ctx, bucketName, objectName, minio.RemoveObjectOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to remove object: %w", err)
+	}
+
+	return nil
 }
 
 func convertToWebP(imageData []byte) ([]byte, error) {
-	img, err := decodeImage(imageData)
-	if err != nil {
-		return nil, err
-	}
-
-	webpData, err := encodeToWebP(img)
-	if err != nil {
-		return nil, err
-	}
-
-	return webpData, nil
-}
-
-func decodeImage(data []byte) (image.Image, error) {
-	img, _, err := image.Decode(bytes.NewReader(data))
+	img, _, err := image.Decode(bytes.NewReader(imageData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode image: %w", err)
 	}
 
-	return img, nil
-}
-
-func encodeToWebP(img image.Image) ([]byte, error) {
 	var buf bytes.Buffer
-
 	options, err := encoder.NewLossyEncoderOptions(encoder.PresetDefault, 75)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to create encoder options: %w", err)
 	}
 
-	err = webp.Encode(&buf, img, options)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode image: %w", err)
+	if err = webp.Encode(&buf, img, options); err != nil {
+		return nil, fmt.Errorf("failed to encode to WebP: %w", err)
 	}
 
 	return buf.Bytes(), nil
 }
 
-func (c *Client) uploadToS3(ctx context.Context, bucketName, objectName string, imageData []byte,
-	contentType string) error {
-	reader := bytes.NewReader(imageData)
-	imageSize := int64(len(imageData))
-
-	_, err := c.MinioClient.PutObject(ctx, bucketName, objectName, reader, imageSize, minio.PutObjectOptions{
-		ContentType: contentType,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to put object into S3: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Client) generateLink(bucketName, objectName string) string {
-	return fmt.Sprintf("https://storage.yandexcloud.net/%s/%s", bucketName, objectName)
-}
-
-func (c *Client) DeleteAvatar(ctx context.Context, link string) error {
-	bucketName, objectName, err := parseBucketAndObject(link)
-	if err != nil {
-		return fmt.Errorf("failed to parse backet and object: %w", err)
-	}
-
-	err = c.bucketAndObjectExist(ctx, bucketName, objectName)
-	if err != nil {
-		return err
-	}
-
-	err = c.removeObject(ctx, bucketName, objectName)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func parseBucketAndObject(link string) (string, string, error) {
-	u, err := url.Parse(link)
-	if err != nil {
-		return "", "", fmt.Errorf("invalid URL: %w", err)
-	}
-
-	parts := strings.SplitN(strings.TrimPrefix(u.Path, "/"), "/", 2)
-	if len(parts) < 2 {
-		return "", "", fmt.Errorf("link doesn't contain bucket and object name")
-	}
-
-	return parts[0], parts[1], nil
-}
-
-func (c *Client) bucketAndObjectExist(ctx context.Context, bucketName, objectName string) error {
-	_, err := c.MinioClient.StatObject(ctx, bucketName, objectName, minio.StatObjectOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to object does not exist or cannot be accessed: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Client) removeObject(ctx context.Context, bucketName, objectName string) error {
-	err := c.MinioClient.RemoveObject(ctx, bucketName, objectName, minio.RemoveObjectOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to remove object from s3: %w", err)
-	}
-
-	return nil
+func (c *Client) BucketName() string {
+	return c.bucketName
 }

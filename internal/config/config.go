@@ -37,9 +37,10 @@ type S3Storage struct {
 }
 
 type Kafka struct {
-	UserNewSet    string `env:"AVATAR_SET_NEW_USER"`
-	SocietyNewSet string `env:"AVATAR_SET_NEW_SOCIETY"`
-	Server        string `env:"KAFKA_SERVER"`
+	Host         string `env:"KAFKA_HOST"`
+	Port         string `env:"KAFKA_PORT"`
+	UserTopic    string `env:"AVATAR_SET_NEW_USER"`
+	SocietyTopic string `env:"AVATAR_SET_NEW_SOCIETY"`
 }
 
 type Metrics struct {

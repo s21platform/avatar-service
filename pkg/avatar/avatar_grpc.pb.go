@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -32,7 +33,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AvatarServiceClient interface {
 	SetUserAvatar(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[SetUserAvatarIn, SetUserAvatarOut], error)
-	GetAllUserAvatars(ctx context.Context, in *GetAllUserAvatarsIn, opts ...grpc.CallOption) (*GetAllUserAvatarsOut, error)
+	GetAllUserAvatars(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAllUserAvatarsOut, error)
 	DeleteUserAvatar(ctx context.Context, in *DeleteUserAvatarIn, opts ...grpc.CallOption) (*Avatar, error)
 	SetSocietyAvatar(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[SetSocietyAvatarIn, SetSocietyAvatarOut], error)
 	GetAllSocietyAvatars(ctx context.Context, in *GetAllSocietyAvatarsIn, opts ...grpc.CallOption) (*GetAllSocietyAvatarsOut, error)
@@ -60,7 +61,7 @@ func (c *avatarServiceClient) SetUserAvatar(ctx context.Context, opts ...grpc.Ca
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type AvatarService_SetUserAvatarClient = grpc.ClientStreamingClient[SetUserAvatarIn, SetUserAvatarOut]
 
-func (c *avatarServiceClient) GetAllUserAvatars(ctx context.Context, in *GetAllUserAvatarsIn, opts ...grpc.CallOption) (*GetAllUserAvatarsOut, error) {
+func (c *avatarServiceClient) GetAllUserAvatars(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAllUserAvatarsOut, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetAllUserAvatarsOut)
 	err := c.cc.Invoke(ctx, AvatarService_GetAllUserAvatars_FullMethodName, in, out, cOpts...)
@@ -118,7 +119,7 @@ func (c *avatarServiceClient) DeleteSocietyAvatar(ctx context.Context, in *Delet
 // for forward compatibility.
 type AvatarServiceServer interface {
 	SetUserAvatar(grpc.ClientStreamingServer[SetUserAvatarIn, SetUserAvatarOut]) error
-	GetAllUserAvatars(context.Context, *GetAllUserAvatarsIn) (*GetAllUserAvatarsOut, error)
+	GetAllUserAvatars(context.Context, *emptypb.Empty) (*GetAllUserAvatarsOut, error)
 	DeleteUserAvatar(context.Context, *DeleteUserAvatarIn) (*Avatar, error)
 	SetSocietyAvatar(grpc.ClientStreamingServer[SetSocietyAvatarIn, SetSocietyAvatarOut]) error
 	GetAllSocietyAvatars(context.Context, *GetAllSocietyAvatarsIn) (*GetAllSocietyAvatarsOut, error)
@@ -136,7 +137,7 @@ type UnimplementedAvatarServiceServer struct{}
 func (UnimplementedAvatarServiceServer) SetUserAvatar(grpc.ClientStreamingServer[SetUserAvatarIn, SetUserAvatarOut]) error {
 	return status.Errorf(codes.Unimplemented, "method SetUserAvatar not implemented")
 }
-func (UnimplementedAvatarServiceServer) GetAllUserAvatars(context.Context, *GetAllUserAvatarsIn) (*GetAllUserAvatarsOut, error) {
+func (UnimplementedAvatarServiceServer) GetAllUserAvatars(context.Context, *emptypb.Empty) (*GetAllUserAvatarsOut, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAllUserAvatars not implemented")
 }
 func (UnimplementedAvatarServiceServer) DeleteUserAvatar(context.Context, *DeleteUserAvatarIn) (*Avatar, error) {
@@ -180,7 +181,7 @@ func _AvatarService_SetUserAvatar_Handler(srv interface{}, stream grpc.ServerStr
 type AvatarService_SetUserAvatarServer = grpc.ClientStreamingServer[SetUserAvatarIn, SetUserAvatarOut]
 
 func _AvatarService_GetAllUserAvatars_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetAllUserAvatarsIn)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -192,7 +193,7 @@ func _AvatarService_GetAllUserAvatars_Handler(srv interface{}, ctx context.Conte
 		FullMethod: AvatarService_GetAllUserAvatars_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AvatarServiceServer).GetAllUserAvatars(ctx, req.(*GetAllUserAvatarsIn))
+		return srv.(AvatarServiceServer).GetAllUserAvatars(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }

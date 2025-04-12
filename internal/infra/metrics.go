@@ -54,7 +54,7 @@ func MetricsStreamInterceptor(metrics *pkg.Metrics) grpc.StreamServerInterceptor
 		method := strings.Trim(strings.ReplaceAll(info.FullMethod, "/", "_"), "_")
 		metrics.Increment(method)
 
-		wrappedStream := &model.WrappedServerStream{
+		wrappedStream := &model.ContextServerStream{
 			ServerStream: ss,
 			Ctx:          context.WithValue(ss.Context(), config.KeyMetrics, metrics),
 		}

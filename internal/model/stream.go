@@ -6,11 +6,11 @@ import (
 	"google.golang.org/grpc"
 )
 
-type WrappedServerStream struct {
+type ContextServerStream struct {
 	grpc.ServerStream
 	Ctx context.Context
 }
 
-func (w *WrappedServerStream) Context() context.Context {
+func (w *ContextServerStream) Context() context.Context {
 	return w.Ctx
 }
