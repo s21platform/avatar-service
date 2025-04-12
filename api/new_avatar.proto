@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-option go_package = "pkg/new_avatar_register";
-
-message NewAvatarRegister {
-  string uuid = 1;
-  string link = 2;
-}

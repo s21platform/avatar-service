@@ -10,6 +10,7 @@
     - [GetAllSocietyAvatarsIn](#-GetAllSocietyAvatarsIn)
     - [GetAllSocietyAvatarsOut](#-GetAllSocietyAvatarsOut)
     - [GetAllUserAvatarsOut](#-GetAllUserAvatarsOut)
+    - [NewAvatarRegister](#-NewAvatarRegister)
     - [SetSocietyAvatarIn](#-SetSocietyAvatarIn)
     - [SetSocietyAvatarOut](#-SetSocietyAvatarOut)
     - [SetUserAvatarIn](#-SetUserAvatarIn)
@@ -113,6 +114,22 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | avatar_list | [Avatar](#Avatar) | repeated |  |
+
+
+
+
+
+
+<a name="-NewAvatarRegister"></a>
+
+### NewAvatarRegister
+kafka contracts
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| uuid | [string](#string) |  |  |
+| link | [string](#string) |  |  |
 
 
 

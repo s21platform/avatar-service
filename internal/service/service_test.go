@@ -17,7 +17,6 @@ import (
 	"github.com/s21platform/avatar-service/internal/config"
 	"github.com/s21platform/avatar-service/internal/model"
 	"github.com/s21platform/avatar-service/pkg/avatar"
-	"github.com/s21platform/avatar-service/pkg/new_avatar_register"
 )
 
 func TestService_SetUserAvatar(t *testing.T) {
@@ -56,7 +55,7 @@ func TestService_SetUserAvatar(t *testing.T) {
 		}).Return("https://s3.example.com/avatar.jpg", nil)
 
 		mockRepo.EXPECT().SetUserAvatar(gomock.Any(), "test-uuid", "https://s3.example.com/avatar.jpg").Return(nil)
-		mockUserKafka.EXPECT().ProduceMessage(gomock.Any(), &new_avatar_register.NewAvatarRegister{
+		mockUserKafka.EXPECT().ProduceMessage(gomock.Any(), &avatar.NewAvatarRegister{
 			Uuid: "test-uuid",
 			Link: "https://s3.example.com/avatar.jpg",
 		}, "test-uuid").Return(nil)
@@ -269,7 +268,7 @@ func TestService_DeleteUserAvatar(t *testing.T) {
 		mockS3.EXPECT().RemoveObject(gomock.Any(), "https://s3.example.com/avatar.jpg").Return(nil)
 		mockRepo.EXPECT().DeleteUserAvatar(gomock.Any(), 1).Return(nil)
 		mockRepo.EXPECT().GetLatestUserAvatar(gomock.Any(), "test-uuid").Return("https://s3.example.com/latest.jpg")
-		mockUserKafka.EXPECT().ProduceMessage(gomock.Any(), &new_avatar_register.NewAvatarRegister{
+		mockUserKafka.EXPECT().ProduceMessage(gomock.Any(), &avatar.NewAvatarRegister{
 			Uuid: "test-uuid",
 			Link: "https://s3.example.com/latest.jpg",
 		}, "test-uuid").Return(nil)
@@ -404,7 +403,7 @@ func TestService_SetSocietyAvatar(t *testing.T) {
 		}).Return("https://s3.example.com/society.jpg", nil)
 
 		mockRepo.EXPECT().SetSocietyAvatar(gomock.Any(), "society-uuid", "https://s3.example.com/society.jpg").Return(nil)
-		mockSocietyKafka.EXPECT().ProduceMessage(gomock.Any(), &new_avatar_register.NewAvatarRegister{
+		mockSocietyKafka.EXPECT().ProduceMessage(gomock.Any(), &avatar.NewAvatarRegister{
 			Uuid: "society-uuid",
 			Link: "https://s3.example.com/society.jpg",
 		}, "society-uuid").Return(nil)
@@ -622,7 +621,7 @@ func TestService_DeleteSocietyAvatar(t *testing.T) {
 		mockS3.EXPECT().RemoveObject(gomock.Any(), "https://s3.example.com/society.jpg").Return(nil)
 		mockRepo.EXPECT().DeleteSocietyAvatar(gomock.Any(), 1).Return(nil)
 		mockRepo.EXPECT().GetLatestSocietyAvatar(gomock.Any(), "society-uuid").Return("https://s3.example.com/latest_society.jpg")
-		mockSocietyKafka.EXPECT().ProduceMessage(gomock.Any(), &new_avatar_register.NewAvatarRegister{
+		mockSocietyKafka.EXPECT().ProduceMessage(gomock.Any(), &avatar.NewAvatarRegister{
 			Uuid: "society-uuid",
 			Link: "https://s3.example.com/latest_society.jpg",
 		}, "society-uuid").Return(nil)

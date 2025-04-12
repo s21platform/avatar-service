@@ -15,7 +15,6 @@ import (
 	"github.com/s21platform/avatar-service/internal/config"
 	"github.com/s21platform/avatar-service/internal/model"
 	"github.com/s21platform/avatar-service/pkg/avatar"
-	"github.com/s21platform/avatar-service/pkg/new_avatar_register"
 )
 
 type Service struct {
@@ -79,7 +78,7 @@ func (s *Service) SetUserAvatar(stream avatar.AvatarService_SetUserAvatarServer)
 		return status.Errorf(codes.Internal, "failed to save avatar to database: %v", err)
 	}
 
-	msg := &new_avatar_register.NewAvatarRegister{
+	msg := &avatar.NewAvatarRegister{
 		Uuid: uuid,
 		Link: link,
 	}
@@ -138,7 +137,7 @@ func (s *Service) DeleteUserAvatar(ctx context.Context, in *avatar.DeleteUserAva
 
 	latestAvatar := s.repository.GetLatestUserAvatar(ctx, avatarInfo.UUID)
 
-	msg := &new_avatar_register.NewAvatarRegister{
+	msg := &avatar.NewAvatarRegister{
 		Uuid: avatarInfo.UUID,
 		Link: latestAvatar,
 	}
@@ -195,7 +194,7 @@ func (s *Service) SetSocietyAvatar(stream avatar.AvatarService_SetSocietyAvatarS
 		return status.Errorf(codes.Internal, "failed to save avatar to database: %v", err)
 	}
 
-	msg := &new_avatar_register.NewAvatarRegister{
+	msg := &avatar.NewAvatarRegister{
 		Uuid: avatarContent.UUID,
 		Link: link,
 	}
@@ -254,7 +253,7 @@ func (s *Service) DeleteSocietyAvatar(ctx context.Context, in *avatar.DeleteSoci
 
 	latestAvatar := s.repository.GetLatestSocietyAvatar(ctx, avatarInfo.UUID)
 
-	msg := &new_avatar_register.NewAvatarRegister{
+	msg := &avatar.NewAvatarRegister{
 		Uuid: avatarInfo.UUID,
 		Link: latestAvatar,
 	}

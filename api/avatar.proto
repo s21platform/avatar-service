@@ -15,8 +15,8 @@ service AvatarService {
 }
 
 message SetUserAvatarIn {
-  string filename = 2;
-  bytes batch = 3;
+  string filename = 1;
+  bytes batch = 2;
 }
 
 message SetUserAvatarOut {
@@ -56,4 +56,10 @@ message GetAllSocietyAvatarsOut {
 
 message DeleteSocietyAvatarIn {
   int32 avatar_id = 1;
+}
+
+// kafka contracts
+message NewAvatarRegister {
+  string uuid = 1;
+  string link = 2;
 }

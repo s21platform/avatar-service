@@ -26,6 +26,7 @@ spec:
     - SetSocietyAvatar-v0
     - GetAllSocietyAvatars-v0
     - DeleteSocietyAvatar-v0
+    - NewAvatarRegister-v0
 
 ---
 
@@ -47,9 +48,8 @@ spec:
     rpc SetUserAvatar(stream SetUserAvatarIn) returns (SetUserAvatarOut){};
     
     message SetUserAvatarIn {
-      string uuid = 1;
-      string filename = 2;
-      bytes batch = 3;
+      string filename = 1;
+      bytes batch = 2;
     }
     
     message SetUserAvatarOut {
@@ -65,7 +65,6 @@ metadata:
   description: Получение всех аватаров пользователя
   annotations:
     github.com/project-slug: s21platform/avatar-service
-  #    backstage.io/techdocs-ref: dir:.  # Если планируете использовать TechDocs
   tags:
     - proto
 spec:
@@ -73,11 +72,9 @@ spec:
   lifecycle: production
   owner: avatar-service-team
   definition: |
-    rpc GetAllUserAvatars(GetAllUserAvatarsIn) returns (GetAllUserAvatarsOut){};
+    import "google/protobuf/empty.proto";
     
-    message GetAllUserAvatarsIn {
-      string uuid = 1;
-    }
+    rpc GetAllUserAvatars(google.protobuf.Empty) returns (GetAllUserAvatarsOut){};
     
     message Avatar {
       int32 id = 1;
@@ -197,5 +194,27 @@ spec:
     
     message Avatar {
       int32 id = 1;
+      string link = 2;
+    }
+
+---
+
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: NewAvatarRegister-v0
+  description: Kafka-сообщение для регистрации нового аватара
+  annotations:
+    github.com/project-slug: s21platform/avatar-service
+  tags:
+    - kafka
+    - proto
+spec:
+  type: kafka
+  lifecycle: production
+  owner: avatar-service-team
+  definition: |
+    message NewAvatarRegister {
+      string uuid = 1;
       string link = 2;
     }

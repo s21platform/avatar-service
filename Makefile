@@ -3,7 +3,6 @@
 protogen:
 	protoc --go_out=. --go-grpc_out=. ./api/avatar.proto
 	protoc --doc_out=. --doc_opt=markdown,GRPC_API.md ./api/avatar.proto
-	protoc --go_out=. --go-grpc_out=. ./api/new_avatar.proto
 
 coverage:
 	go test -coverprofile=coverage.out ./...
