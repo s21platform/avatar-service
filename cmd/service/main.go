@@ -49,6 +49,7 @@ func main() {
 			infra.Logger(logger),
 		),
 		grpc.ChainStreamInterceptor(
+			infra.StreamAuthInterceptor(),
 			infra.MetricsStreamInterceptor(metrics),
 			infra.StreamLogger(logger),
 		),
