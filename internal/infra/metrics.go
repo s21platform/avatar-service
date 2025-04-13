@@ -1,14 +1,16 @@
 package infra
 
 import (
-	"avatar_service/internal/config"
-	modelMetrics "avatar_service/internal/model"
 	"context"
 	"strings"
 	"time"
 
-	"github.com/s21platform/metrics-lib/pkg"
 	"google.golang.org/grpc"
+
+	"github.com/s21platform/metrics-lib/pkg"
+
+	"github.com/s21platform/avatar-service/internal/config"
+	"github.com/s21platform/avatar-service/internal/model"
 )
 
 func MetricsInterceptor(metrics *pkg.Metrics) func(
@@ -52,7 +54,7 @@ func MetricsStreamInterceptor(metrics *pkg.Metrics) grpc.StreamServerInterceptor
 		method := strings.Trim(strings.ReplaceAll(info.FullMethod, "/", "_"), "_")
 		metrics.Increment(method)
 
-		wrappedStream := &modelMetrics.WrappedServerStream{
+		wrappedStream := &model.ContextServerStream{
 			ServerStream: ss,
 			Ctx:          context.WithValue(ss.Context(), config.KeyMetrics, metrics),
 		}
