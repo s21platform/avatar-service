@@ -23,14 +23,16 @@ type Service struct {
 	repository           DBRepo
 	userKafkaProducer    KafkaProducer
 	societyKafkaProducer KafkaProducer
+	chatKafkaProducer    KafkaProducer
 }
 
-func New(s3Client S3Storage, repo DBRepo, userKafkaProducer KafkaProducer, societyKafkaProducer KafkaProducer) *Service {
+func New(s3Client S3Storage, repo DBRepo, userKafkaProducer KafkaProducer, societyKafkaProducer KafkaProducer, chatKafkaProducer KafkaProducer) *Service {
 	return &Service{
 		s3Client:             s3Client,
 		repository:           repo,
 		userKafkaProducer:    userKafkaProducer,
 		societyKafkaProducer: societyKafkaProducer,
+		chatKafkaProducer:    chatKafkaProducer,
 	}
 }
 
@@ -87,6 +89,11 @@ func (s *Service) SetUserAvatar(stream avatar.AvatarService_SetUserAvatarServer)
 		return status.Errorf(codes.Internal, "failed to produce message to user service: %v", err)
 	}
 
+	if err = s.chatKafkaProducer.ProduceMessage(ctx, msg, uuid); err != nil {
+		logger.Error(fmt.Sprintf("failed to produce message to chat service: %v", err))
+		return status.Errorf(codes.Internal, "failed to produce message to chat service: %v", err)
+	}
+
 	return stream.SendAndClose(&avatar.SetUserAvatarOut{
 		Link: link,
 	})
@@ -141,10 +148,14 @@ func (s *Service) DeleteUserAvatar(ctx context.Context, in *avatar.DeleteUserAva
 		Uuid: avatarInfo.UUID,
 		Link: latestAvatar,
 	}
-	err = s.userKafkaProducer.ProduceMessage(ctx, msg, avatarInfo.UUID)
-	if err != nil {
+	if err = s.userKafkaProducer.ProduceMessage(ctx, msg, avatarInfo.UUID); err != nil {
 		logger.Error(fmt.Sprintf("failed to produce avatar to user service: %v", err))
 		return nil, status.Errorf(codes.Internal, "failed to produce avatar to user service: %v", err)
+	}
+
+	if err = s.chatKafkaProducer.ProduceMessage(ctx, msg, avatarInfo.UUID); err != nil {
+		logger.Error(fmt.Sprintf("failed to produce message to chat service: %v", err))
+		return nil, status.Errorf(codes.Internal, "failed to produce message to chat service: %v", err)
 	}
 
 	return &avatar.Avatar{
