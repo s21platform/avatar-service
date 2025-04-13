@@ -34,6 +34,7 @@ func TestService_SetUserAvatar(t *testing.T) {
 	mockRepo := NewMockDBRepo(ctrl)
 	mockUserKafka := NewMockKafkaProducer(ctrl)
 	mockSocietyKafka := NewMockKafkaProducer(ctrl)
+	mockChatKafka := NewMockKafkaProducer(ctrl)
 
 	t.Run("set_ok", func(t *testing.T) {
 		mockLogger.EXPECT().AddFuncName("SetUserAvatar")
@@ -59,8 +60,12 @@ func TestService_SetUserAvatar(t *testing.T) {
 			Uuid: "test-uuid",
 			Link: "https://s3.example.com/avatar.jpg",
 		}, "test-uuid").Return(nil)
+		mockChatKafka.EXPECT().ProduceMessage(gomock.Any(), &avatar.NewAvatarRegister{
+			Uuid: "test-uuid",
+			Link: "https://s3.example.com/avatar.jpg",
+		}, "test-uuid").Return(nil)
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		err := s.SetUserAvatar(stream)
 
 		assert.NoError(t, err)
@@ -74,7 +79,7 @@ func TestService_SetUserAvatar(t *testing.T) {
 		stream := NewMockAvatarService_SetUserAvatarServer(ctrl)
 		stream.EXPECT().Context().Return(ctxNoUUID).AnyTimes()
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		err := s.SetUserAvatar(stream)
 
 		st, ok := status.FromError(err)
@@ -91,7 +96,7 @@ func TestService_SetUserAvatar(t *testing.T) {
 		stream.EXPECT().Context().Return(ctx).AnyTimes()
 		stream.EXPECT().Recv().Return(nil, errors.New("stream error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		err := s.SetUserAvatar(stream)
 
 		st, ok := status.FromError(err)
@@ -114,7 +119,7 @@ func TestService_SetUserAvatar(t *testing.T) {
 
 		mockS3.EXPECT().PutObject(gomock.Any(), gomock.Any()).Return("", errors.New("s3 error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		err := s.SetUserAvatar(stream)
 
 		st, ok := status.FromError(err)
@@ -138,7 +143,7 @@ func TestService_SetUserAvatar(t *testing.T) {
 		mockS3.EXPECT().PutObject(gomock.Any(), gomock.Any()).Return("https://s3.example.com/avatar.jpg", nil)
 		mockRepo.EXPECT().SetUserAvatar(gomock.Any(), "test-uuid", "https://s3.example.com/avatar.jpg").Return(errors.New("repo error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		err := s.SetUserAvatar(stream)
 
 		st, ok := status.FromError(err)
@@ -147,7 +152,7 @@ func TestService_SetUserAvatar(t *testing.T) {
 		assert.Contains(t, st.Message(), "failed to save avatar to database")
 	})
 
-	t.Run("kafka_error", func(t *testing.T) {
+	t.Run("user_kafka_error", func(t *testing.T) {
 		mockLogger.EXPECT().AddFuncName("SetUserAvatar")
 		mockLogger.EXPECT().Error("failed to produce message to user service: kafka error")
 
@@ -163,13 +168,39 @@ func TestService_SetUserAvatar(t *testing.T) {
 		mockRepo.EXPECT().SetUserAvatar(gomock.Any(), "test-uuid", "https://s3.example.com/avatar.jpg").Return(nil)
 		mockUserKafka.EXPECT().ProduceMessage(gomock.Any(), gomock.Any(), "test-uuid").Return(errors.New("kafka error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		err := s.SetUserAvatar(stream)
 
 		st, ok := status.FromError(err)
 		assert.True(t, ok)
 		assert.Equal(t, codes.Internal, st.Code())
 		assert.Contains(t, st.Message(), "failed to produce message to user service")
+	})
+
+	t.Run("chat_kafka_error", func(t *testing.T) {
+		mockLogger.EXPECT().AddFuncName("SetUserAvatar")
+		mockLogger.EXPECT().Error("failed to produce message to chat service: kafka error")
+
+		stream := NewMockAvatarService_SetUserAvatarServer(ctrl)
+		stream.EXPECT().Context().Return(ctx).AnyTimes()
+		stream.EXPECT().Recv().Return(&avatar.SetUserAvatarIn{
+			Filename: "test.jpg",
+			Batch:    []byte{1, 2, 3},
+		}, nil).Times(1)
+		stream.EXPECT().Recv().Return(nil, io.EOF).Times(1)
+
+		mockS3.EXPECT().PutObject(gomock.Any(), gomock.Any()).Return("https://s3.example.com/avatar.jpg", nil)
+		mockRepo.EXPECT().SetUserAvatar(gomock.Any(), "test-uuid", "https://s3.example.com/avatar.jpg").Return(nil)
+		mockUserKafka.EXPECT().ProduceMessage(gomock.Any(), gomock.Any(), "test-uuid").Return(nil)
+		mockChatKafka.EXPECT().ProduceMessage(gomock.Any(), gomock.Any(), "test-uuid").Return(errors.New("kafka error"))
+
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
+		err := s.SetUserAvatar(stream)
+
+		st, ok := status.FromError(err)
+		assert.True(t, ok)
+		assert.Equal(t, codes.Internal, st.Code())
+		assert.Contains(t, st.Message(), "failed to produce message to chat service")
 	})
 }
 
@@ -188,6 +219,7 @@ func TestService_GetAllUserAvatars(t *testing.T) {
 	mockRepo := NewMockDBRepo(ctrl)
 	mockUserKafka := NewMockKafkaProducer(ctrl)
 	mockSocietyKafka := NewMockKafkaProducer(ctrl)
+	mockChatKafka := NewMockKafkaProducer(ctrl)
 
 	t.Run("get_ok", func(t *testing.T) {
 		mockLogger.EXPECT().AddFuncName("GetAllUserAvatars")
@@ -199,7 +231,7 @@ func TestService_GetAllUserAvatars(t *testing.T) {
 
 		mockRepo.EXPECT().GetAllUserAvatars(gomock.Any(), "test-uuid").Return(expectedAvatars, nil)
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		result, err := s.GetAllUserAvatars(ctx, &emptypb.Empty{})
 
 		assert.NoError(t, err)
@@ -215,7 +247,7 @@ func TestService_GetAllUserAvatars(t *testing.T) {
 		mockLogger.EXPECT().AddFuncName("GetAllUserAvatars")
 		mockLogger.EXPECT().Error("uuid is required")
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		_, err := s.GetAllUserAvatars(ctxNoUUID, &emptypb.Empty{})
 
 		st, ok := status.FromError(err)
@@ -230,7 +262,7 @@ func TestService_GetAllUserAvatars(t *testing.T) {
 
 		mockRepo.EXPECT().GetAllUserAvatars(gomock.Any(), "test-uuid").Return(nil, errors.New("repo error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		_, err := s.GetAllUserAvatars(ctx, &emptypb.Empty{})
 
 		st, ok := status.FromError(err)
@@ -254,6 +286,7 @@ func TestService_DeleteUserAvatar(t *testing.T) {
 	mockRepo := NewMockDBRepo(ctrl)
 	mockUserKafka := NewMockKafkaProducer(ctrl)
 	mockSocietyKafka := NewMockKafkaProducer(ctrl)
+	mockChatKafka := NewMockKafkaProducer(ctrl)
 
 	t.Run("delete_ok", func(t *testing.T) {
 		mockLogger.EXPECT().AddFuncName("DeleteUserAvatar")
@@ -272,8 +305,12 @@ func TestService_DeleteUserAvatar(t *testing.T) {
 			Uuid: "test-uuid",
 			Link: "https://s3.example.com/latest.jpg",
 		}, "test-uuid").Return(nil)
+		mockChatKafka.EXPECT().ProduceMessage(gomock.Any(), &avatar.NewAvatarRegister{
+			Uuid: "test-uuid",
+			Link: "https://s3.example.com/latest.jpg",
+		}, "test-uuid").Return(nil)
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		result, err := s.DeleteUserAvatar(ctx, &avatar.DeleteUserAvatarIn{AvatarId: 1})
 
 		assert.NoError(t, err)
@@ -287,7 +324,7 @@ func TestService_DeleteUserAvatar(t *testing.T) {
 
 		mockRepo.EXPECT().GetUserAvatarData(gomock.Any(), 1).Return(nil, errors.New("repo error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		_, err := s.DeleteUserAvatar(ctx, &avatar.DeleteUserAvatarIn{AvatarId: 1})
 
 		st, ok := status.FromError(err)
@@ -309,7 +346,7 @@ func TestService_DeleteUserAvatar(t *testing.T) {
 		mockRepo.EXPECT().GetUserAvatarData(gomock.Any(), 1).Return(avatarInfo, nil)
 		mockS3.EXPECT().RemoveObject(gomock.Any(), "https://s3.example.com/avatar.jpg").Return(errors.New("s3 error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		_, err := s.DeleteUserAvatar(ctx, &avatar.DeleteUserAvatarIn{AvatarId: 1})
 
 		st, ok := status.FromError(err)
@@ -332,7 +369,7 @@ func TestService_DeleteUserAvatar(t *testing.T) {
 		mockS3.EXPECT().RemoveObject(gomock.Any(), "https://s3.example.com/avatar.jpg").Return(nil)
 		mockRepo.EXPECT().DeleteUserAvatar(gomock.Any(), 1).Return(errors.New("repo error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		_, err := s.DeleteUserAvatar(ctx, &avatar.DeleteUserAvatarIn{AvatarId: 1})
 
 		st, ok := status.FromError(err)
@@ -341,7 +378,7 @@ func TestService_DeleteUserAvatar(t *testing.T) {
 		assert.Contains(t, st.Message(), "failed to delete avatar in postgres")
 	})
 
-	t.Run("kafka_error", func(t *testing.T) {
+	t.Run("user_kafka_error", func(t *testing.T) {
 		mockLogger.EXPECT().AddFuncName("DeleteUserAvatar")
 		mockLogger.EXPECT().Error("failed to produce avatar to user service: kafka error")
 
@@ -357,13 +394,39 @@ func TestService_DeleteUserAvatar(t *testing.T) {
 		mockRepo.EXPECT().GetLatestUserAvatar(gomock.Any(), "test-uuid").Return("https://s3.example.com/latest.jpg")
 		mockUserKafka.EXPECT().ProduceMessage(gomock.Any(), gomock.Any(), "test-uuid").Return(errors.New("kafka error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		_, err := s.DeleteUserAvatar(ctx, &avatar.DeleteUserAvatarIn{AvatarId: 1})
 
 		st, ok := status.FromError(err)
 		assert.True(t, ok)
 		assert.Equal(t, codes.Internal, st.Code())
 		assert.Contains(t, st.Message(), "failed to produce avatar to user service")
+	})
+
+	t.Run("chat_kafka_error", func(t *testing.T) {
+		mockLogger.EXPECT().AddFuncName("DeleteUserAvatar")
+		mockLogger.EXPECT().Error("failed to produce message to chat service: kafka error")
+
+		avatarInfo := &model.AvatarMetadata{
+			ID:   1,
+			UUID: "test-uuid",
+			Link: "https://s3.example.com/avatar.jpg",
+		}
+
+		mockRepo.EXPECT().GetUserAvatarData(gomock.Any(), 1).Return(avatarInfo, nil)
+		mockS3.EXPECT().RemoveObject(gomock.Any(), "https://s3.example.com/avatar.jpg").Return(nil)
+		mockRepo.EXPECT().DeleteUserAvatar(gomock.Any(), 1).Return(nil)
+		mockRepo.EXPECT().GetLatestUserAvatar(gomock.Any(), "test-uuid").Return("https://s3.example.com/latest.jpg")
+		mockUserKafka.EXPECT().ProduceMessage(gomock.Any(), gomock.Any(), "test-uuid").Return(nil)
+		mockChatKafka.EXPECT().ProduceMessage(gomock.Any(), gomock.Any(), "test-uuid").Return(errors.New("kafka error"))
+
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
+		_, err := s.DeleteUserAvatar(ctx, &avatar.DeleteUserAvatarIn{AvatarId: 1})
+
+		st, ok := status.FromError(err)
+		assert.True(t, ok)
+		assert.Equal(t, codes.Internal, st.Code())
+		assert.Contains(t, st.Message(), "failed to produce message to chat service")
 	})
 }
 
@@ -381,6 +444,7 @@ func TestService_SetSocietyAvatar(t *testing.T) {
 	mockRepo := NewMockDBRepo(ctrl)
 	mockUserKafka := NewMockKafkaProducer(ctrl)
 	mockSocietyKafka := NewMockKafkaProducer(ctrl)
+	mockChatKafka := NewMockKafkaProducer(ctrl)
 
 	t.Run("set_ok", func(t *testing.T) {
 		mockLogger.EXPECT().AddFuncName("SetSocietyAvatar")
@@ -408,7 +472,7 @@ func TestService_SetSocietyAvatar(t *testing.T) {
 			Link: "https://s3.example.com/society.jpg",
 		}, "society-uuid").Return(nil)
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		err := s.SetSocietyAvatar(stream)
 
 		assert.NoError(t, err)
@@ -426,7 +490,7 @@ func TestService_SetSocietyAvatar(t *testing.T) {
 		}, nil).Times(1)
 		stream.EXPECT().Recv().Return(nil, io.EOF).Times(1)
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		err := s.SetSocietyAvatar(stream)
 
 		st, ok := status.FromError(err)
@@ -443,7 +507,7 @@ func TestService_SetSocietyAvatar(t *testing.T) {
 		stream.EXPECT().Context().Return(ctx).AnyTimes()
 		stream.EXPECT().Recv().Return(nil, errors.New("stream error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		err := s.SetSocietyAvatar(stream)
 
 		st, ok := status.FromError(err)
@@ -467,7 +531,7 @@ func TestService_SetSocietyAvatar(t *testing.T) {
 
 		mockS3.EXPECT().PutObject(gomock.Any(), gomock.Any()).Return("", errors.New("s3 error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		err := s.SetSocietyAvatar(stream)
 
 		st, ok := status.FromError(err)
@@ -492,7 +556,7 @@ func TestService_SetSocietyAvatar(t *testing.T) {
 		mockS3.EXPECT().PutObject(gomock.Any(), gomock.Any()).Return("https://s3.example.com/society.jpg", nil)
 		mockRepo.EXPECT().SetSocietyAvatar(gomock.Any(), "society-uuid", "https://s3.example.com/society.jpg").Return(errors.New("repo error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		err := s.SetSocietyAvatar(stream)
 
 		st, ok := status.FromError(err)
@@ -518,7 +582,7 @@ func TestService_SetSocietyAvatar(t *testing.T) {
 		mockRepo.EXPECT().SetSocietyAvatar(gomock.Any(), "society-uuid", "https://s3.example.com/society.jpg").Return(nil)
 		mockSocietyKafka.EXPECT().ProduceMessage(gomock.Any(), gomock.Any(), "society-uuid").Return(errors.New("kafka error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		err := s.SetSocietyAvatar(stream)
 
 		st, ok := status.FromError(err)
@@ -542,6 +606,7 @@ func TestService_GetAllSocietyAvatars(t *testing.T) {
 	mockRepo := NewMockDBRepo(ctrl)
 	mockUserKafka := NewMockKafkaProducer(ctrl)
 	mockSocietyKafka := NewMockKafkaProducer(ctrl)
+	mockChatKafka := NewMockKafkaProducer(ctrl)
 
 	t.Run("get_ok", func(t *testing.T) {
 		mockLogger.EXPECT().AddFuncName("GetAllSocietyAvatars")
@@ -553,7 +618,7 @@ func TestService_GetAllSocietyAvatars(t *testing.T) {
 
 		mockRepo.EXPECT().GetAllSocietyAvatars(gomock.Any(), "society-uuid").Return(expectedAvatars, nil)
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		result, err := s.GetAllSocietyAvatars(ctx, &avatar.GetAllSocietyAvatarsIn{Uuid: "society-uuid"})
 
 		assert.NoError(t, err)
@@ -568,7 +633,7 @@ func TestService_GetAllSocietyAvatars(t *testing.T) {
 		mockLogger.EXPECT().AddFuncName("GetAllSocietyAvatars")
 		mockLogger.EXPECT().Error("society uuid is required")
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		_, err := s.GetAllSocietyAvatars(ctx, &avatar.GetAllSocietyAvatarsIn{Uuid: ""})
 
 		st, ok := status.FromError(err)
@@ -583,7 +648,7 @@ func TestService_GetAllSocietyAvatars(t *testing.T) {
 
 		mockRepo.EXPECT().GetAllSocietyAvatars(gomock.Any(), "society-uuid").Return(nil, errors.New("repo error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		_, err := s.GetAllSocietyAvatars(ctx, &avatar.GetAllSocietyAvatarsIn{Uuid: "society-uuid"})
 
 		st, ok := status.FromError(err)
@@ -607,6 +672,7 @@ func TestService_DeleteSocietyAvatar(t *testing.T) {
 	mockRepo := NewMockDBRepo(ctrl)
 	mockUserKafka := NewMockKafkaProducer(ctrl)
 	mockSocietyKafka := NewMockKafkaProducer(ctrl)
+	mockChatKafka := NewMockKafkaProducer(ctrl)
 
 	t.Run("delete_ok", func(t *testing.T) {
 		mockLogger.EXPECT().AddFuncName("DeleteSocietyAvatar")
@@ -626,7 +692,7 @@ func TestService_DeleteSocietyAvatar(t *testing.T) {
 			Link: "https://s3.example.com/latest_society.jpg",
 		}, "society-uuid").Return(nil)
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		result, err := s.DeleteSocietyAvatar(ctx, &avatar.DeleteSocietyAvatarIn{AvatarId: 1})
 
 		assert.NoError(t, err)
@@ -640,7 +706,7 @@ func TestService_DeleteSocietyAvatar(t *testing.T) {
 
 		mockRepo.EXPECT().GetSocietyAvatarData(gomock.Any(), 1).Return(nil, errors.New("repo error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		_, err := s.DeleteSocietyAvatar(ctx, &avatar.DeleteSocietyAvatarIn{AvatarId: 1})
 
 		st, ok := status.FromError(err)
@@ -662,7 +728,7 @@ func TestService_DeleteSocietyAvatar(t *testing.T) {
 		mockRepo.EXPECT().GetSocietyAvatarData(gomock.Any(), 1).Return(avatarInfo, nil)
 		mockS3.EXPECT().RemoveObject(gomock.Any(), "https://s3.example.com/society.jpg").Return(errors.New("s3 error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		_, err := s.DeleteSocietyAvatar(ctx, &avatar.DeleteSocietyAvatarIn{AvatarId: 1})
 
 		st, ok := status.FromError(err)
@@ -685,7 +751,7 @@ func TestService_DeleteSocietyAvatar(t *testing.T) {
 		mockS3.EXPECT().RemoveObject(gomock.Any(), "https://s3.example.com/society.jpg").Return(nil)
 		mockRepo.EXPECT().DeleteSocietyAvatar(gomock.Any(), 1).Return(errors.New("repo error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		_, err := s.DeleteSocietyAvatar(ctx, &avatar.DeleteSocietyAvatarIn{AvatarId: 1})
 
 		st, ok := status.FromError(err)
@@ -710,7 +776,7 @@ func TestService_DeleteSocietyAvatar(t *testing.T) {
 		mockRepo.EXPECT().GetLatestSocietyAvatar(gomock.Any(), "society-uuid").Return("https://s3.example.com/latest_society.jpg")
 		mockSocietyKafka.EXPECT().ProduceMessage(gomock.Any(), gomock.Any(), "society-uuid").Return(errors.New("kafka error"))
 
-		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka)
+		s := New(mockS3, mockRepo, mockUserKafka, mockSocietyKafka, mockChatKafka)
 		_, err := s.DeleteSocietyAvatar(ctx, &avatar.DeleteSocietyAvatarIn{AvatarId: 1})
 
 		st, ok := status.FromError(err)

@@ -37,11 +37,13 @@ func main() {
 
 	userProducerConfig := kafkalib.DefaultProducerConfig(cfg.Kafka.Host, cfg.Kafka.Port, cfg.Kafka.UserTopic)
 	societyProducerConfig := kafkalib.DefaultProducerConfig(cfg.Kafka.Host, cfg.Kafka.Port, cfg.Kafka.SocietyTopic)
+	chatProducerConfig := kafkalib.DefaultProducerConfig(cfg.Kafka.Host, cfg.Kafka.Port, cfg.Kafka.ChatTopic)
 
 	userKafkaProducer := kafkalib.NewProducer(userProducerConfig)
 	societyKafkaProducer := kafkalib.NewProducer(societyProducerConfig)
+	chatKafkaProducer := kafkalib.NewProducer(chatProducerConfig)
 
-	avatarService := service.New(s3Client, dbRepo, userKafkaProducer, societyKafkaProducer)
+	avatarService := service.New(s3Client, dbRepo, userKafkaProducer, societyKafkaProducer, chatKafkaProducer)
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			infra.AuthInterceptor,
